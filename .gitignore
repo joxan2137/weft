@@ -1,0 +1,16 @@
+.ref/
+concepts/
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
+.research/
+*.log
+.shots/
+.env
+.env*.local
+.claude/
+Thumbs.db
+.DS_Store
+src-tauri/.cargo/
+release/

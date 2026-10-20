@@ -1,0 +1,194 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permissions for the main Weft window",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-close",
+    "core:window:allow-start-dragging",
+    "core:window:allow-set-background-color",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "http://*"
+        },
+        {
+          "url": "https://*"
+        },
+        {
+          "url": "mailto:*"
+        }
+      ]
+    },
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        {
+          "path": "$RESOURCE/licenses/**"
+        },
+        {
+          "path": "**"
+        }
+      ],
+      "deny": [
+        {
+          "path": "**/*.[eE][xX][eE]"
+        },
+        {
+          "path": "**/*.[cC][oO][mM]"
+        },
+        {
+          "path": "**/*.[bB][aA][tT]"
+        },
+        {
+          "path": "**/*.[cC][mM][dD]"
+        },
+        {
+          "path": "**/*.[mM][sS][iI]"
+        },
+        {
+          "path": "**/*.[mM][sS][pP]"
+        },
+        {
+          "path": "**/*.[mM][sS][cC]"
+        },
+        {
+          "path": "**/*.[sS][cC][rR]"
+        },
+        {
+          "path": "**/*.[pP][iI][fF]"
+        },
+        {
+          "path": "**/*.[cC][pP][lL]"
+        },
+        {
+          "path": "**/*.[hH][tT][aA]"
+        },
+        {
+          "path": "**/*.[lL][nN][kK]"
+        },
+        {
+          "path": "**/*.[uU][rR][lL]"
+        },
+        {
+          "path": "**/*.[rR][eE][gG]"
+        },
+        {
+          "path": "**/*.[iI][nN][fF]"
+        },
+        {
+          "path": "**/*.[sS][cC][fF]"
+        },
+        {
+          "path": "**/*.[sS][cC][tT]"
+        },
+        {
+          "path": "**/*.[sS][hH][bB]"
+        },
+        {
+          "path": "**/*.[sS][hH][sS]"
+        },
+        {
+          "path": "**/*.[jJ][aA][rR]"
+        },
+        {
+          "path": "**/*.[cC][hH][mM]"
+        },
+        {
+          "path": "**/*.[jJ][sS]"
+        },
+        {
+          "path": "**/*.[jJ][sS][eE]"
+        },
+        {
+          "path": "**/*.[vV][bB][sS]"
+        },
+        {
+          "path": "**/*.[vV][bB][eE]"
+        },
+        {
+          "path": "**/*.[vV][bB]"
+        },
+        {
+          "path": "**/*.[wW][sS][fF]"
+        },
+        {
+          "path": "**/*.[wW][sS][hH]"
+        },
+        {
+          "path": "**/*.[wW][sS]"
+        },
+        {
+          "path": "**/*.[pP][sS]1"
+        },
+        {
+          "path": "**/*.[pP][sS][mM]1"
+        },
+        {
+          "path": "**/*.[pP][sS][dD]1"
+        },
+        {
+          "path": "**/*.[pP][sS]1[xX][mM][lL]"
+        },
+        {
+          "path": "**/*.[pP][sS][cC]1"
+        },
+        {
+          "path": "**/*.[aA][pP][pP][lL][iI][cC][aA][tT][iI][oO][nN]"
+        },
+        {
+          "path": "**/*.[aA][pP][pP][rR][eE][fF]-[mM][sS]"
+        },
+        {
+          "path": "**/*.[aA][pP][pP][xX]"
+        },
+        {
+          "path": "**/*.[aA][pP][pP][xX][bB][uU][nN][dD][lL][eE]"
+        },
+        {
+          "path": "**/*.[mM][sS][iI][xX]"
+        },
+        {
+          "path": "**/*.[mM][sS][iI][xX][bB][uU][nN][dD][lL][eE]"
+        },
+        {
+          "path": "**/*.[aA][pP][pP][iI][nN][sS][tT][aA][lL][lL][eE][rR]"
+        },
+        {
+          "path": "**/*.[gG][aA][dD][gG][eE][tT]"
+        },
+        {
+          "path": "**/*.[dD][iI][aA][gG][cC][aA][bB]"
+        },
+        {
+          "path": "**/*.[sS][eE][tT][tT][iI][nN][gG][cC][oO][nN][tT][eE][nN][tT]-[mM][sS]"
+        },
+        {
+          "path": "**/*.[lL][iI][bB][rR][aA][rR][yY]-[mM][sS]"
+        },
+        {
+          "path": "**/*.[sS][eE][aA][rR][cC][hH]-[mM][sS]"
+        }
+      ]
+    },
+    "opener:allow-reveal-item-in-dir",
+    "clipboard-manager:allow-write-text",
+    "allow-engine-status",
+    "allow-engine-restart",
+    "allow-engine-logs",
+    "allow-engine-settings",
+    "allow-engine-set-settings",
+    "allow-observed-system",
+    "allow-app-info",
+    "allow-open-logs",
+    "allow-save-text-file"
+  ]
+}

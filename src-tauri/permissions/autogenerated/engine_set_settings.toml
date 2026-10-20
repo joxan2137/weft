@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-engine-set-settings"
+description = "Enables the engine_set_settings command without any pre-configured scope."
+commands.allow = ["engine_set_settings"]
+
+[[permission]]
+identifier = "deny-engine-set-settings"
+description = "Denies the engine_set_settings command without any pre-configured scope."
+commands.deny = ["engine_set_settings"]

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Weft",
+  "version": "../package.json",
+  "identifier": "app.weft.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "create": false,
+        "title": "Weft",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 640,
+        "decorations": false,
+        "center": true,
+        "preventOverflow": true,
+        "backgroundColor": "#101215",
+        "generalAutofillEnabled": false,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": {
+        "default-src": "'self'",
+        "connect-src": "'self' ipc: http://ipc.localhost http://127.0.0.1:* ws://127.0.0.1:*",
+        "img-src": "'self' data: blob: http://127.0.0.1:*",
+        "font-src": "'self' data:",
+        "style-src": "'self' 'unsafe-inline'",
+        "script-src": "'self'"
+      },
+      "dangerousDisableAssetCspModification": ["style-src"]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "The Weft authors",
+    "copyright": "Copyright (c) 2026 The Weft authors. MIT License.",
+    "category": "DeveloperTool",
+    "shortDescription": "A liberated desktop client for opencode",
+    "longDescription": "Weft is a desktop client for the opencode coding agent that lets you edit any message, change roles and edit the system prompt.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../plugin/weft-liberated.ts": "opencode/plugins/weft-liberated.ts",
+      "../plugin/weft-workflow.ts": "opencode/plugins/weft-workflow.ts",
+      "../licenses": "licenses",
+      "../LICENSE": "licenses/LICENSE-weft.txt"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["English"],
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "nsis/header.bmp",
+        "sidebarImage": "nsis/sidebar.bmp"
+      }
+    }
+  }
+}

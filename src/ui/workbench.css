@@ -1,0 +1,793 @@
+/* ───────── the inkwell: mentions, commands, shell, attachments ───────── */
+.fell-field .fell-input {
+  position: relative;
+}
+/* mentions are highlighted on a mirror of the textarea, glyph for glyph */
+.fell-mirror {
+  position: absolute;
+  top: 16px;
+  left: 18px;
+  right: 18px;
+  bottom: 4px;
+  font-family: var(--font-you);
+  font-size: var(--text-you);
+  font-variation-settings: "opsz" 18, "SOFT" 50;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  color: transparent;
+  overflow: hidden;
+  pointer-events: none;
+}
+.fell-mention {
+  color: transparent;
+  border-radius: 4px;
+  background: var(--indigo-wash);
+  box-shadow: inset 0 -1.5px 0 color-mix(in srgb, var(--indigo-bright) 60%, transparent);
+}
+.fell-box.dropping {
+  border-color: var(--indigo-bright);
+}
+.fell-drop {
+  z-index: 2;
+  pointer-events: none;
+}
+.fell-error {
+  white-space: pre-wrap;
+}
+
+/* ───────── @ and / suggestions: a sheet floating above the inkwell ───────── */
+.suggest {
+  position: absolute;
+  left: 36px;
+  right: 36px;
+  bottom: calc(100% + 10px);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  max-width: calc(var(--column) - 32px);
+  max-height: min(372px, 46vh);
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: var(--radius-l);
+  background: var(--paper-2);
+  border: 1px solid var(--line-2);
+  /* a paper mist above the sheet: what it covers fades under it instead of being sliced */
+  --suggest-mist:
+    0 -36px 40px 8px color-mix(in srgb, var(--paper) 96%, transparent),
+    0 -8px 12px 6px var(--paper);
+  box-shadow:
+    var(--suggest-mist),
+    var(--shadow-3),
+    inset 0 1px 0 var(--highlight);
+}
+.suggest ul {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+}
+.suggest li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 12px 0 6px;
+  border-radius: var(--radius);
+  font-size: var(--text-ui);
+  color: var(--ink-2);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--t-micro) var(--ease);
+  --suggest-ink: var(--indigo);
+  --suggest-wash: var(--indigo-wash);
+}
+.suggest li.on {
+  background: var(--tint-2);
+  color: var(--ink);
+}
+.suggest li[data-kind="folder"] {
+  --suggest-ink: var(--ochre);
+  --suggest-wash: var(--ochre-wash);
+}
+.suggest li[data-kind="command"] {
+  --suggest-ink: var(--teal);
+  --suggest-wash: var(--teal-wash);
+}
+.suggest-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-s);
+  color: var(--suggest-ink);
+  transition:
+    background var(--t-micro) var(--ease),
+    box-shadow var(--t-micro) var(--ease);
+}
+.suggest li.on .suggest-icon {
+  background: var(--suggest-wash);
+}
+.suggest-label {
+  flex: none;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.suggest li[data-kind="command"] .suggest-label {
+  font-family: var(--font-code);
+  font-size: var(--text-code);
+}
+.suggest-label b {
+  font-weight: var(--weight-strong);
+  color: var(--suggest-ink);
+}
+.suggest-tag {
+  flex: none;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--ink-3);
+  background: var(--tint-2);
+}
+.suggest-detail {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+li.suggest-empty {
+  height: 44px;
+  padding: 0 12px;
+  color: var(--ink-3);
+  cursor: default;
+}
+.suggest-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 38px;
+  padding: 0 14px 0 18px;
+  border-top: 1px solid var(--line);
+  font-size: var(--text-small);
+  color: var(--ink-3);
+}
+.suggest-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+.suggest-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.suggest-keys kbd {
+  min-width: 20px;
+  justify-content: center;
+}
+
+.seg button:disabled,
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.seg button:disabled:hover:not(.on) {
+  color: var(--ink-3);
+}
+.icon-btn:disabled:hover {
+  background: none;
+  color: var(--ink-3);
+}
+
+/* ───────── review: a calm sheet of what the work changed ───────── */
+.review-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  background: color-mix(in srgb, var(--paper) 55%, transparent);
+  backdrop-filter: blur(6px);
+  animation: veil-in var(--t-ui) var(--ease) both;
+}
+@keyframes veil-in {
+  from {
+    opacity: 0;
+  }
+}
+.review {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  width: min(760px, calc(100% - 24px));
+  margin-inline: auto;
+  overflow: hidden;
+  border-radius: var(--radius-l);
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  box-shadow:
+    var(--shadow-3),
+    inset 0 1px 0 var(--highlight);
+}
+.review:focus-visible {
+  outline: none;
+}
+.review-head {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 16px 12px 4px 24px;
+}
+.review-heading {
+  min-width: 0;
+  padding-top: 2px;
+}
+.review-title {
+  margin: 0;
+  font-family: var(--font-you);
+  font-size: 22px;
+  font-weight: 520;
+  font-variation-settings: "opsz" 48, "SOFT" 50;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.review-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  font-size: var(--text-small);
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.review-sep {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--ink-4);
+}
+.review .add {
+  color: var(--teal);
+}
+.review .del {
+  color: var(--carmine);
+}
+.review-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 14px 20px;
+}
+.review-modes button {
+  text-transform: none;
+}
+.seg.review-modes button.on {
+  background: var(--paper-2);
+}
+.review-notice {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 14px 12px 20px;
+  padding: 8px 12px 8px 14px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  color: var(--indigo);
+  background: var(--indigo-wash);
+  cursor: pointer;
+}
+.review-notice-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.review-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 12px 20px;
+  border-top: 1px solid var(--line);
+}
+.review-file:first-child {
+  margin-top: 8px;
+}
+.review-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+  padding: 56px 24px;
+  text-align: center;
+  color: var(--ink-3);
+}
+.review-empty.bad {
+  color: var(--carmine);
+}
+.review-file {
+  --status: var(--ochre-bright);
+}
+.review-file[data-status="added"] {
+  --status: var(--teal-bright);
+}
+.review-file[data-status="deleted"] {
+  --status: var(--carmine-bright);
+}
+.review-file-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 6px 0 8px;
+  border-radius: 12px;
+  background: var(--paper-2);
+  cursor: pointer;
+  transition: background var(--t-micro) var(--ease);
+}
+.review-file-head:hover {
+  background: linear-gradient(var(--tint-2) 0 0), var(--paper-2);
+}
+.review-fold {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--ink-4);
+}
+.review-status {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--status);
+}
+.review-path {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.review-name {
+  flex: none;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-ui);
+  font-weight: 500;
+  color: var(--ink);
+}
+.review-dir {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-small);
+  color: var(--ink-3);
+}
+.review-file[data-status="deleted"] .review-name {
+  color: var(--ink-3);
+  text-decoration: line-through;
+  text-decoration-color: var(--carmine);
+}
+.review-stat {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-small);
+  font-weight: 500;
+}
+.review-meter {
+  display: flex;
+  width: 44px;
+  height: 5px;
+  margin-left: 2px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--tint-2);
+}
+.review-meter .add {
+  background: var(--teal-bright);
+}
+.review-meter .del {
+  background: var(--carmine-bright);
+}
+.review-open {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-s);
+  visibility: hidden;
+}
+.review-file-head:hover .review-open,
+.review-file-head:focus-within .review-open {
+  visibility: visible;
+}
+.review-note {
+  margin: 2px 0 12px 34px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+.review-file .diff {
+  margin: 2px 0 14px 34px;
+  padding: 0 0 6px;
+  overflow: hidden;
+  border-radius: 12px;
+  font-size: 12.5px;
+  line-height: 20px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+.review-file .diff-line {
+  grid-template-columns: 48px 20px minmax(0, 1fr);
+  padding-right: 16px;
+}
+.review-file .diff-no {
+  padding-right: 12px;
+  color: var(--ink-4);
+}
+.review-file .diff-mark {
+  text-align: center;
+  color: var(--ink-4);
+}
+.review-file .diff-text {
+  color: var(--ink-2);
+}
+.review-file .diff-line.add {
+  background: color-mix(in srgb, var(--teal-wash) 70%, transparent);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--teal-bright) 70%, transparent);
+}
+.review-file .diff-line.del {
+  background: color-mix(in srgb, var(--carmine-wash) 70%, transparent);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--carmine-bright) 70%, transparent);
+}
+.review-file .diff-line.add .diff-text,
+.review-file .diff-line.del .diff-text {
+  color: var(--ink);
+}
+.review-file .diff-line.add :is(.diff-no, .diff-mark) {
+  color: var(--teal);
+}
+.review-file .diff-line.del :is(.diff-no, .diff-mark) {
+  color: var(--carmine);
+}
+/* hunk bands only between hunks: the line numbers already say where the first one starts */
+.review-file .diff-line.hunk {
+  margin: 6px 0 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  color: var(--ink-3);
+  background: var(--tint-1);
+}
+.review-file .diff-line.hunk:first-child {
+  display: none;
+}
+.review-file .diff-line:first-child:not(.hunk),
+.review-file .diff-line.hunk:first-child + .diff-line {
+  margin-top: 6px;
+}
+.review-file .diff-line.hunk .diff-mark {
+  visibility: hidden;
+}
+.review-file .diff .more {
+  margin: 6px 0 2px 68px;
+}
+
+/* ───────── terminal: a drawer of shells under the conversation ───────── */
+.loom:has(> .terminal-drawer) {
+  display: flex;
+  flex-direction: column;
+}
+.loom:has(> .terminal-drawer) > .cloth-wrap {
+  flex: 1 1 0;
+  min-height: 0;
+}
+/* not .terminal: xterm puts that class on its own element */
+.terminal-drawer {
+  position: relative;
+  flex: none;
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  min-height: 160px;
+  max-height: calc(100% - 220px);
+  margin: 0 12px 12px;
+  border-radius: var(--radius-l);
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  box-shadow:
+    var(--shadow-2),
+    inset 0 1px 0 var(--highlight);
+}
+.terminal-grip {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: -6px;
+  z-index: 1;
+  height: 14px;
+  cursor: ns-resize;
+}
+.terminal-grip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  width: 36px;
+  height: 4px;
+  margin-left: -18px;
+  border-radius: 999px;
+  background: var(--line-2);
+  transition: background var(--t-micro) var(--ease);
+}
+.terminal-grip:hover::after {
+  background: var(--ink-4);
+}
+.terminal-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 50px;
+  padding: 8px 10px 0 18px;
+  white-space: nowrap;
+}
+.terminal-title {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.terminal-title .drop {
+  width: 8px;
+  height: 8px;
+}
+.terminal-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--tint-2);
+  overflow: auto hidden;
+  scrollbar-width: none;
+}
+.terminal-tab {
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: 28px;
+  border-radius: 999px;
+  color: var(--ink-3);
+  transition:
+    background var(--t-micro) var(--ease),
+    color var(--t-micro) var(--ease);
+}
+.terminal-tab:hover {
+  color: var(--ink);
+}
+.terminal-tab.on {
+  color: var(--ink);
+  background: var(--paper-2);
+  box-shadow: var(--shadow-1);
+}
+.terminal-tab-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 100%;
+  padding: 0 2px 0 11px;
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: padding var(--t-micro) var(--ease);
+}
+.terminal-tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-role-bright);
+}
+.terminal-tab.exited .terminal-tab-dot {
+  background: var(--ink-4);
+}
+.terminal-tab-exited {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ink-4);
+}
+.terminal-tab-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin: 0 4px 0 2px;
+  overflow: hidden;
+  border-radius: 50%;
+  color: var(--ink-4);
+  transition:
+    width var(--t-micro) var(--ease),
+    margin var(--t-micro) var(--ease),
+    opacity var(--t-micro) var(--ease),
+    visibility var(--t-micro) var(--ease),
+    background var(--t-micro) var(--ease),
+    color var(--t-micro) var(--ease);
+}
+/* a resting tab folds its close away, so its pill stays as snug as the chosen one */
+.terminal-tab:not(.on, :hover, :focus-within) .terminal-tab-name {
+  padding-right: 11px;
+}
+.terminal-tab:not(.on, :hover, :focus-within) .terminal-tab-close {
+  width: 0;
+  margin: 0;
+  opacity: 0;
+  visibility: hidden;
+}
+.terminal-tab-close:hover {
+  color: var(--carmine);
+  background: var(--carmine-wash);
+}
+.terminal-new {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+}
+.terminal-failure {
+  min-width: 0;
+  max-width: 380px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12.5px;
+  color: var(--carmine);
+}
+.terminal-cwd {
+  min-width: 0;
+  margin-right: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-small);
+  color: var(--ink-3);
+}
+.terminal-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.pty {
+  position: absolute;
+  inset: 8px 10px 12px 18px;
+  display: none;
+}
+.pty.active {
+  display: block;
+}
+/* xterm draws VS Code's square scrollbar with inline sizes: pare it to the app's thin rounded thumb */
+.terminal-drawer .xterm {
+  --vscode-scrollbar-shadow: transparent;
+}
+.terminal-drawer .xterm-scrollable-element > .scrollbar.vertical {
+  width: var(--scroll-w) !important;
+}
+.terminal-drawer .xterm-scrollable-element > .scrollbar > .slider {
+  left: 3px !important;
+  width: calc(var(--scroll-w) - 6px) !important;
+  border-radius: 999px;
+}
+/* the thumb shows while the pointer is over the shell: at rest a half-faded slider reads as a stray line */
+.terminal-body:not(:hover) .xterm-scrollable-element > .scrollbar {
+  opacity: 0;
+  transition: opacity var(--t-micro) var(--ease);
+}
+.terminal-note {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 12px;
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  color: var(--carmine);
+  background: var(--carmine-wash);
+}
+.terminal-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  height: 100%;
+  color: var(--ink-3);
+}
+
+/* ───────── night: the sheets float on dark water, dots and the chosen row carry a little light (docs/DESIGN.md A.8) ───────── */
+:root[data-theme="dark"] .review-scrim {
+  background: color-mix(in srgb, var(--paper) 62%, transparent);
+}
+:root[data-theme="dark"] :is(.review, .terminal-drawer) {
+  border-color: var(--line-2);
+}
+:root[data-theme="dark"] .review {
+  box-shadow:
+    var(--shadow-3),
+    inset 0 1px 0 var(--highlight),
+    0 24px 110px -34px color-mix(in srgb, var(--indigo-bright) 32%, transparent);
+}
+/* lifted halfway toward --paper-3; Terminal.tsx paints the shell onto the same mix */
+:root[data-theme="dark"] .terminal-drawer {
+  background: color-mix(in srgb, var(--paper-3) 50%, var(--paper-2));
+  box-shadow:
+    var(--shadow-2),
+    inset 0 1px 0 var(--highlight),
+    0 -10px 60px -30px color-mix(in srgb, var(--ink-role-bright) 30%, transparent);
+}
+:root[data-theme="dark"] .suggest {
+  box-shadow:
+    var(--suggest-mist),
+    var(--shadow-3),
+    inset 0 1px 0 var(--highlight),
+    0 0 70px -24px color-mix(in srgb, var(--indigo-bright) 35%, transparent);
+}
+:root[data-theme="dark"] .suggest li.on .suggest-icon {
+  box-shadow: 0 0 14px -2px color-mix(in srgb, var(--suggest-ink) 35%, transparent);
+}
+/* the typed match glows in the row's own pale ink */
+:root[data-theme="dark"] .suggest-label b {
+  text-shadow: 0 0 10px color-mix(in srgb, var(--suggest-ink) 35%, transparent);
+}
+:root[data-theme="dark"] .review-file .diff-line.add {
+  background-color: color-mix(in srgb, var(--teal-wash) 55%, transparent);
+}
+:root[data-theme="dark"] .review-file .diff-line.del {
+  background-color: color-mix(in srgb, var(--carmine-wash) 55%, transparent);
+}
+:root[data-theme="dark"] .review-file .diff-line:is(.add, .del) .diff-mark {
+  text-shadow: 0 0 8px color-mix(in srgb, currentColor 45%, transparent);
+}
+:root[data-theme="dark"] .review-status {
+  box-shadow: 0 0 8px color-mix(in srgb, var(--status) 45%, transparent);
+}
+:root[data-theme="dark"] .terminal-tab.on .terminal-tab-dot {
+  box-shadow: 0 0 8px color-mix(in srgb, var(--ink-role-bright) 45%, transparent);
+}
+:root[data-theme="dark"] .seg.review-modes button.on {
+  background: var(--paper-lift);
+}
+/* the chosen shell catches the drawer's own ink */
+:root[data-theme="dark"] .terminal-tab.on {
+  background:
+    linear-gradient(color-mix(in srgb, var(--ink-role-wash) 60%, transparent) 0 0),
+    var(--paper-lift);
+  box-shadow:
+    var(--shadow-1),
+    inset 0 1px 0 var(--highlight);
+}

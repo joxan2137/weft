@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-observed-system"
+description = "Enables the observed_system command without any pre-configured scope."
+commands.allow = ["observed_system"]
+
+[[permission]]
+identifier = "deny-observed-system"
+description = "Denies the observed_system command without any pre-configured scope."
+commands.deny = ["observed_system"]

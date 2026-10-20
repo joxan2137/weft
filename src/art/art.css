@@ -1,0 +1,544 @@
+/* the signature pieces of Flow (docs/DESIGN.md A.5) */
+
+/* ───────── the water ───────── */
+.water {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+}
+.water.still {
+  display: none;
+}
+
+/* ───────── the mark ───────── */
+.mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 4px;
+  font-family: var(--font-you);
+  font-style: italic;
+  font-size: 21px;
+  font-weight: 480;
+  font-variation-settings: "opsz" 48, "SOFT" 100, "WONK" 1;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  line-height: 1;
+}
+.mark-drop path {
+  fill: var(--indigo-bright);
+}
+.mark-drop {
+  transform-origin: 50% 100%;
+}
+.mark.live .mark-drop {
+  animation: drip 1.8s var(--ease) infinite;
+}
+@keyframes drip {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  40% {
+    transform: translateY(-2px) scale(0.92, 1.08);
+  }
+  70% {
+    transform: translateY(0) scale(1.08, 0.9);
+  }
+}
+
+/* ───────── ink drops and pots ───────── */
+.drop {
+  flex: none;
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 0 50% 50% 50%;
+  transform: rotate(45deg);
+  background: var(--ink-role-bright, var(--ink-3));
+}
+.pot {
+  flex: none;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ink-role-bright, var(--ink-3));
+  box-shadow: inset 0 -2px 3px rgb(0 0 0 / 0.18);
+}
+
+/* ───────── ink settling: fresh words arrive soft and coloured, then dry to sharp ink ───────── */
+.settle {
+  animation: settle 650ms var(--ease) both;
+}
+@keyframes settle {
+  from {
+    color: var(--ink-role-bright, var(--indigo-bright));
+    opacity: 0.15;
+    filter: blur(1.6px);
+  }
+  55% {
+    filter: blur(0.3px);
+  }
+  to {
+    opacity: 1;
+    filter: none;
+  }
+}
+
+/* ───────── marbled prints ───────── */
+.marble {
+  position: relative;
+  flex: none;
+  display: inline-block;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--paper-3);
+}
+.marble img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.marble::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    inset 0 1px 0 var(--highlight-soft);
+  pointer-events: none;
+}
+
+/* ───────── the vessel ───────── */
+.vessel {
+  flex: none;
+  display: inline-block;
+  vertical-align: middle;
+  overflow: visible;
+}
+.vessel-layer {
+  fill: var(--ink-role-bright);
+  opacity: 0.78;
+}
+.vessel-surface {
+  fill: rgb(255 255 255 / 0.32);
+}
+.vessel-glass {
+  fill: none;
+  stroke: var(--ink-3);
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+}
+
+/* ───────── boot: still paper, one drop falling ───────── */
+.boot {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: var(--paper);
+  transition:
+    opacity 700ms var(--ease),
+    transform 700ms var(--ease);
+}
+.boot.leaving {
+  opacity: 0;
+  transform: translateY(-14px);
+  pointer-events: none;
+}
+.boot-center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-top: 110px;
+  min-width: 280px;
+}
+.boot-drop {
+  position: absolute;
+  top: 0;
+  left: calc(50% - 9px);
+  animation: fall 1.6s cubic-bezier(0.55, 0, 0.85, 0.4) infinite;
+}
+.boot-drop path {
+  fill: var(--indigo-bright);
+}
+.boot.failed .boot-drop {
+  animation: none;
+  top: 58px;
+}
+.boot.failed .boot-drop path {
+  fill: var(--carmine-bright);
+}
+@keyframes fall {
+  0% {
+    transform: translateY(-10px) scale(0.6);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  62% {
+    transform: translateY(62px) scale(1, 1.06);
+    opacity: 1;
+  }
+  70%,
+  100% {
+    transform: translateY(68px) scale(1.5, 0.3);
+    opacity: 0;
+  }
+}
+.boot-ripples {
+  position: absolute;
+  top: 82px;
+  left: 50%;
+  width: 0;
+  height: 0;
+}
+.boot-ripples span {
+  position: absolute;
+  left: -70px;
+  top: -10px;
+  width: 140px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--indigo-bright);
+  opacity: 0;
+  animation: ripple 1.6s var(--ease) infinite;
+  animation-delay: calc(1.6s * 0.66);
+}
+.boot-ripples span:nth-child(2) {
+  animation-delay: calc(1.6s * 0.66 + 0.16s);
+}
+.boot-ripples span:nth-child(3) {
+  animation-delay: calc(1.6s * 0.66 + 0.32s);
+}
+.boot.failed .boot-ripples {
+  display: none;
+}
+@keyframes ripple {
+  0% {
+    transform: scale(0.08);
+    opacity: 0.7;
+  }
+  60% {
+    opacity: 0.18;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+.boot-name {
+  margin: 18px 0 0;
+  font-family: var(--font-you);
+  font-style: italic;
+  font-weight: 420;
+  font-size: 46px;
+  font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.boot-status {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-3);
+}
+.boot-progress {
+  width: 180px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--paper-4);
+  overflow: hidden;
+}
+.boot-progress span {
+  display: block;
+  height: 100%;
+  background: var(--indigo-bright);
+  transition: width 200ms linear;
+}
+.boot-detail {
+  margin: 0;
+  max-width: 420px;
+  text-align: center;
+  font-size: var(--text-small);
+  color: var(--ink-4);
+}
+.boot.failed .boot-detail {
+  color: var(--carmine);
+}
+.boot-progress.unsized span {
+  width: 30%;
+  animation: unsized 1.4s var(--ease) infinite alternate;
+}
+@keyframes unsized {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(333%);
+  }
+}
+.boot-guide {
+  margin: 4px 0 0;
+  max-width: 420px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.boot-details {
+  max-width: 420px;
+  font-size: var(--text-small);
+  color: var(--ink-3);
+}
+.boot-details summary {
+  cursor: pointer;
+  text-align: center;
+}
+.boot-details[open] summary {
+  margin-bottom: 6px;
+}
+.boot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+/* the frameless window keeps its controls while the boot paper covers the strip on top */
+.boot .win {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: var(--top-h);
+}
+/* reduced motion: the drop rests above the paper instead of falling */
+:root[data-motion="reduce"] .boot-drop {
+  animation: none;
+  top: 58px;
+}
+:root[data-motion="reduce"] .boot-ripples {
+  display: none;
+}
+:root[data-motion="reduce"] .boot-progress.unsized span {
+  width: 100%;
+  opacity: 0.35;
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .boot-drop {
+    animation: none;
+    top: 58px;
+  }
+  .boot-ripples {
+    display: none;
+  }
+  .boot-progress.unsized span {
+    width: 100%;
+    opacity: 0.35;
+    animation: none;
+  }
+}
+
+/* ───────── the head of a session ───────── */
+.session-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 6px 0 40px;
+}
+.head-marble {
+  border-radius: 15px;
+  box-shadow: var(--shadow-2);
+}
+.head-text {
+  min-width: 0;
+}
+.head-title {
+  margin: 0;
+  font-family: var(--font-you);
+  font-size: 27px;
+  font-weight: var(--weight-medium);
+  font-variation-settings: "opsz" 72, "SOFT" 50;
+  line-height: 1.18;
+  letter-spacing: -0.018em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.head-meta {
+  margin: 5px 0 0;
+  font-size: var(--text-small);
+  color: var(--ink-3);
+}
+
+/* ───────── the whole conversation ───────── */
+.history-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 19;
+  background: color-mix(in srgb, var(--paper) 55%, transparent);
+  backdrop-filter: blur(6px);
+  animation: scrim-fade var(--t-ui) var(--ease) both;
+}
+@keyframes scrim-fade {
+  from {
+    opacity: 0;
+  }
+}
+.history {
+  position: absolute;
+  z-index: 20;
+  top: 14px;
+  left: 50%;
+  width: min(760px, calc(100% - 40px));
+  max-height: calc(100% - 28px);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 18px 12px;
+  border-radius: var(--radius-l);
+  background: var(--paper-2);
+  box-shadow:
+    var(--shadow-3),
+    inset 0 1px 0 var(--highlight);
+  border: 1px solid var(--line);
+}
+.history-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px;
+}
+.history-title {
+  margin: 0;
+  font-family: var(--font-you);
+  font-size: 22px;
+  font-weight: var(--weight-medium);
+  letter-spacing: -0.01em;
+}
+.history-sub {
+  margin: 2px 0 0;
+  font-size: var(--text-small);
+  color: var(--ink-3);
+}
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+}
+.history-list li button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 10px 76px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  text-align: left;
+}
+.history-list li.on button {
+  background: var(--paper-3);
+}
+.history-list li.muted {
+  opacity: 0.5;
+}
+.history-who {
+  font-size: 12.5px;
+  font-weight: var(--weight-strong);
+  color: var(--ink-role);
+}
+.history-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-2);
+}
+.history-list li[data-role="user"] .history-text {
+  font-family: var(--font-you);
+  font-size: 14.5px;
+  font-weight: var(--weight-you);
+}
+.history-none {
+  padding: 18px 10px;
+  color: var(--ink-3);
+}
+
+/* ───────── night: the inks are light (docs/DESIGN.md A.8) ───────── */
+:root[data-theme="dark"] .mark-drop {
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--indigo-bright) 75%, transparent));
+}
+:root[data-theme="dark"] .drop,
+:root[data-theme="dark"] .pot {
+  box-shadow: 0 0 9px color-mix(in srgb, var(--ink-role-bright, var(--ink-3)) 60%, transparent);
+}
+:root[data-theme="dark"] .settle {
+  animation-name: settle-night;
+}
+@keyframes settle-night {
+  from {
+    color: var(--ink-role-bright, var(--indigo-bright));
+    opacity: 0.2;
+    filter: blur(1.4px);
+    text-shadow: 0 0 14px var(--ink-role-bright, var(--indigo-bright));
+  }
+  55% {
+    filter: blur(0.2px);
+    text-shadow: 0 0 8px color-mix(in srgb, var(--ink-role-bright, var(--indigo-bright)) 50%, transparent);
+  }
+  to {
+    opacity: 1;
+    filter: none;
+    text-shadow: 0 0 0 transparent;
+  }
+}
+:root[data-theme="dark"] .cursor {
+  box-shadow: 0 0 8px var(--ink-role-bright, var(--ink));
+}
+/* a drop landing on a dark surface: a faint pool of light where it lands, its first ring a highlight */
+:root[data-theme="dark"] .boot {
+  background:
+    radial-gradient(ellipse 320px 120px at 50% calc(50% - 46px), color-mix(in srgb, var(--indigo-bright) 9%, transparent), transparent 70%),
+    var(--paper);
+}
+:root[data-theme="dark"] .boot-drop {
+  filter: drop-shadow(0 0 10px var(--indigo-bright));
+}
+:root[data-theme="dark"] .boot-ripples span {
+  border-color: color-mix(in srgb, var(--indigo-bright) 80%, var(--ink));
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--indigo-bright) 45%, transparent),
+    inset 0 0 8px color-mix(in srgb, var(--indigo-bright) 30%, transparent);
+}
+:root[data-theme="dark"] .boot-progress span {
+  box-shadow: 0 0 8px var(--indigo-bright);
+}
+:root[data-theme="dark"] .vessel-layer {
+  opacity: 0.9;
+}
+:root[data-theme="dark"] .vessel-surface {
+  fill: rgb(255 255 255 / 0.22);
+}
+:root[data-theme="dark"] .marble::after {
+  box-shadow:
+    inset 0 0 0 1px var(--line-2),
+    inset 0 1px 0 var(--highlight-soft);
+}
+:root[data-theme="dark"] .head-marble {
+  box-shadow:
+    var(--shadow-2),
+    0 0 28px -6px color-mix(in srgb, var(--indigo-bright) 30%, transparent);
+}
+:root[data-theme="dark"] .history-scrim {
+  background: color-mix(in srgb, var(--paper) 62%, transparent);
+}

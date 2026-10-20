@@ -1,0 +1,277 @@
+:root {
+  color-scheme: light;
+
+  /* paper and water */
+  --paper: #f2efe7;
+  --paper-2: #f9f7f2;
+  --paper-3: #e9e5da;
+  --paper-4: #dfdacd;
+  --line: rgb(28 32 39 / 0.09);
+  --line-2: rgb(28 32 39 / 0.16);
+
+  /* ink for text */
+  --ink: #1c2027;
+  --ink-2: #41464f;
+  --ink-3: #676c74;
+  --ink-4: #a3a5a8;
+
+  /* the five inks */
+  --vermilion: #b8382a;
+  --vermilion-bright: #e0533a;
+  --vermilion-wash: #f4ddd5;
+  --indigo: #2c4a92;
+  --indigo-bright: #3d63c4;
+  --indigo-wash: #dfe5f3;
+  --ochre: #8a5f10;
+  --ochre-bright: #c9922a;
+  --ochre-wash: #f2e7cd;
+  --teal: #1b6e61;
+  --teal-bright: #2a9a87;
+  --teal-wash: #d7ebe5;
+  --carmine: #a3233b;
+  --carmine-bright: #d03a55;
+  --carmine-wash: #f3dade;
+
+  /* type */
+  --font-you: "Fraunces Variable", "Iowan Old Style", Georgia, serif;
+  --font-model: "Geist Variable", "Segoe UI Variable Text", "Segoe UI", sans-serif;
+  --font-ui: "Geist Variable", "Segoe UI Variable Text", "Segoe UI", sans-serif;
+  --font-code: "Geist Mono Variable", "Cascadia Mono", Consolas, monospace;
+
+  --text-you: 17px;
+  --text-model: 15px;
+  --text-ui: 13.5px;
+  --text-small: 12px;
+  --text-code: 13px;
+
+  --weight-text: 400;
+  --weight-you: 400;
+  --weight-medium: 500;
+  --weight-strong: 600;
+
+  --ease: cubic-bezier(0.22, 0.8, 0.2, 1);
+  --t-ui: 300ms;
+  --t-settle: 600ms;
+
+  --radius-s: 8px;
+  --radius: 14px;
+  --radius-l: 22px;
+  --shadow-1: 0 1px 2px rgb(28 32 39 / 0.05);
+  --shadow-2: 0 1px 2px rgb(28 32 39 / 0.05), 0 10px 30px -8px rgb(28 32 39 / 0.14);
+  --shadow-3: 0 2px 4px rgb(28 32 39 / 0.06), 0 24px 60px -12px rgb(28 32 39 / 0.22);
+
+  --top-h: 48px;
+  --sessions-w: 280px;
+  --currents-w: 320px;
+  --column: 720px;
+  --scroll-w: 10px;
+
+  /* translucent ink for hovers and wells, highlights on raised paper, solid fills under white text */
+  --tint-1: rgb(28 32 39 / 0.04);
+  --tint-2: rgb(28 32 39 / 0.06);
+  --highlight: rgb(255 255 255 / 0.6);
+  --highlight-soft: rgb(255 255 255 / 0.35);
+  --indigo-solid: #2c4a92;
+
+  /* paper lifted toward the light (selected rows, active segments, hovered buttons) and the one filled action */
+  --paper-lift: var(--paper);
+  --primary: var(--ink);
+  --on-primary: var(--paper-2);
+
+  /* code */
+  --syn-text: var(--ink);
+  --syn-comment: #8a8c90;
+  --syn-keyword: #2c4a92;
+  --syn-string: #1b6e61;
+  --syn-constant: #b8382a;
+  --syn-function: #7a3f8f;
+  --syn-type: #8a5f10;
+  --syn-property: #41464f;
+  --syn-punctuation: #676c74;
+
+  /* earlier names, kept as aliases until every component uses the names above */
+  --bg-0: var(--paper);
+  --bg: var(--paper);
+  --bg-1: var(--paper-2);
+  --bg-2: var(--paper-3);
+  --bg-3: var(--paper-4);
+  --rule: var(--line-2);
+  --rule-soft: var(--line);
+  --fg-bright: var(--ink);
+  --fg: var(--ink);
+  --fg-2: var(--ink-2);
+  --dim: var(--ink-3);
+  --faint: var(--ink-4);
+  --yellow: var(--vermilion);
+  --yellow-bright: var(--vermilion-bright);
+  --yellow-dim: var(--vermilion-wash);
+  --green: var(--indigo);
+  --green-bright: var(--indigo-bright);
+  --green-dim: var(--indigo-wash);
+  --cyan: var(--ochre);
+  --cyan-bright: var(--ochre-bright);
+  --cyan-dim: var(--ochre-wash);
+  --magenta: var(--teal);
+  --magenta-bright: var(--teal-bright);
+  --magenta-dim: var(--teal-wash);
+  --red: var(--carmine);
+  --red-bright: var(--carmine-bright);
+  --red-dim: var(--carmine-wash);
+  --blue: var(--indigo);
+  --blue-bright: var(--indigo-bright);
+  --blue-dim: var(--indigo-wash);
+  --font-env: var(--font-model);
+  --font-proc: var(--font-code);
+  --font-serif: var(--font-you);
+  --font-sans: var(--font-ui);
+  --font-mono: var(--font-code);
+  --text: var(--text-ui);
+  --line-h: 20px;
+  --ground-0: var(--paper);
+  --ground-1: var(--paper);
+  --ground-2: var(--paper-2);
+  --ground-3: var(--paper-3);
+  --ground-4: var(--paper-4);
+  --rule-1: var(--line);
+  --rule-2: var(--line-2);
+  --rule-3: var(--ink-4);
+  --linen-1: var(--ink);
+  --linen-2: var(--ink-2);
+  --linen-3: var(--ink-3);
+  --linen-4: var(--ink-4);
+  --weld: var(--ochre);
+  --weld-bright: var(--ochre-bright);
+  --weld-dim: var(--ochre-wash);
+  --madder: var(--vermilion);
+  --madder-bright: var(--vermilion-bright);
+  --madder-dim: var(--vermilion-wash);
+  --woad: var(--indigo);
+  --woad-bright: var(--indigo-bright);
+  --woad-dim: var(--indigo-wash);
+  --verdigris: var(--teal);
+  --verdigris-bright: var(--teal-bright);
+  --verdigris-dim: var(--teal-wash);
+  --cochineal: var(--carmine);
+  --cochineal-bright: var(--carmine-bright);
+  --cochineal-dim: var(--carmine-wash);
+  --size-label: var(--text-small);
+  --size-meta: var(--text-small);
+  --size-mono: var(--text-code);
+  --size-sans: var(--text-model);
+  --size-serif: var(--text-you);
+  --ease-taut: var(--ease);
+  --ease-slack: var(--ease);
+  --t-micro: 160ms;
+  --t-std: var(--t-ui);
+  --t-beat: var(--t-settle);
+}
+
+/*
+ * Night (docs/DESIGN.md A.8): the paper becomes an inkstone's wet well and the inks become light.
+ * By day ink multiplies the paper; at night it screens the dark water, so overlapping inks glow.
+ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --paper: #101215;
+  --paper-2: #171a1e;
+  --paper-3: #1f2328;
+  --paper-4: #2a2f35;
+  --line: rgb(236 231 220 / 0.075);
+  --line-2: rgb(236 231 220 / 0.14);
+
+  /* light text on dark reads heavier than dark on light: soften its colour, never its weight, so lines wrap alike in both themes */
+  --ink: #e6e1d6;
+  --ink-2: #bdb8ad;
+  --ink-3: #8f8b84;
+  --ink-4: #6f6c67;
+
+  --vermilion: #ff9b80;
+  --vermilion-bright: #ff6a4a;
+  --vermilion-wash: rgb(255 106 74 / 0.15);
+  --indigo: #a3b6ff;
+  --indigo-bright: #6d8bff;
+  --indigo-wash: rgb(109 139 255 / 0.16);
+  --ochre: #f0c56e;
+  --ochre-bright: #eaa63a;
+  --ochre-wash: rgb(234 166 58 / 0.15);
+  --teal: #74dfc7;
+  --teal-bright: #2ec7a5;
+  --teal-wash: rgb(46 199 165 / 0.14);
+  --carmine: #ff8aa0;
+  --carmine-bright: #ff4f74;
+  --carmine-wash: rgb(255 79 116 / 0.15);
+
+  --tint-1: rgb(236 231 220 / 0.04);
+  --tint-2: rgb(236 231 220 / 0.065);
+  --highlight: rgb(255 255 255 / 0.1);
+  --highlight-soft: rgb(255 255 255 / 0.06);
+  --indigo-solid: #4a66e0;
+
+  --paper-lift: var(--paper-4);
+  --primary: var(--indigo-solid);
+  --on-primary: #fff;
+
+  /* a shadow on dark water is deep navy, never black: raised paper takes its edge from a rim of light */
+  --shadow-1: 0 1px 2px rgb(4 6 14 / 0.35);
+  --shadow-2: 0 1px 2px rgb(4 6 14 / 0.35), 0 12px 30px -10px rgb(4 6 14 / 0.45), 0 0 0 1px rgb(236 231 220 / 0.04);
+  --shadow-3: 0 2px 6px rgb(4 6 14 / 0.38), 0 26px 60px -16px rgb(4 6 14 / 0.5), 0 0 0 1px rgb(236 231 220 / 0.05);
+
+  --syn-comment: #77746e;
+  --syn-keyword: #a3b6ff;
+  --syn-string: #74dfc7;
+  --syn-constant: #ff9b80;
+  --syn-function: #d9aef5;
+  --syn-type: #f0c56e;
+  --syn-property: #c5c0b5;
+  --syn-punctuation: #8f8b84;
+}
+
+[data-role="system"] {
+  --ink-role: var(--ochre);
+  --ink-role-bright: var(--ochre-bright);
+  --ink-role-wash: var(--ochre-wash);
+  --voice: var(--font-model);
+  --fd: var(--ink-role);
+  --fd-bright: var(--ink-role-bright);
+  --fd-dim: var(--ink-role-wash);
+  --dye: var(--ink-role);
+  --dye-bright: var(--ink-role-bright);
+  --dye-dim: var(--ink-role-wash);
+}
+[data-role="user"] {
+  --ink-role: var(--vermilion);
+  --ink-role-bright: var(--vermilion-bright);
+  --ink-role-wash: var(--vermilion-wash);
+  --voice: var(--font-you);
+  --fd: var(--ink-role);
+  --fd-bright: var(--ink-role-bright);
+  --fd-dim: var(--ink-role-wash);
+  --dye: var(--ink-role);
+  --dye-bright: var(--ink-role-bright);
+  --dye-dim: var(--ink-role-wash);
+}
+[data-role="assistant"] {
+  --ink-role: var(--indigo);
+  --ink-role-bright: var(--indigo-bright);
+  --ink-role-wash: var(--indigo-wash);
+  --voice: var(--font-model);
+  --fd: var(--ink-role);
+  --fd-bright: var(--ink-role-bright);
+  --fd-dim: var(--ink-role-wash);
+  --dye: var(--ink-role);
+  --dye-bright: var(--ink-role-bright);
+  --dye-dim: var(--ink-role-wash);
+}
+[data-role="tool"] {
+  --ink-role: var(--teal);
+  --ink-role-bright: var(--teal-bright);
+  --ink-role-wash: var(--teal-wash);
+  --voice: var(--font-code);
+  --fd: var(--ink-role);
+  --fd-bright: var(--ink-role-bright);
+  --fd-dim: var(--ink-role-wash);
+  --dye: var(--ink-role);
+  --dye-bright: var(--ink-role-bright);
+  --dye-dim: var(--ink-role-wash);
+}
