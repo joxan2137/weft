@@ -8,6 +8,8 @@ use tauri::Url;
 pub const FILE: &str = "weft-liberated.ts";
 /// The `workflow` tool, a plugin of its own so liberation never depends on it.
 pub const WORKFLOW_FILE: &str = "weft-workflow.ts";
+/// Routes opencode zen fetches through the proxy pool when Weft enables it; idle otherwise.
+pub const PROXY_FILE: &str = "weft-proxy.ts";
 pub const CANARY: &str = "weft_canary";
 
 pub fn copy_bundled(from: &Path, to: &Path) -> io::Result<()> {
@@ -26,7 +28,7 @@ pub fn copy_bundled(from: &Path, to: &Path) -> io::Result<()> {
 /// replace them. Denying the canary keeps it out of model requests but listed in tool ids.
 pub fn config_content(plugin_dir: &Path) -> Option<String> {
     let url = |file: &str| Url::from_file_path(plugin_dir.join(file)).ok().map(String::from);
-    Some(json!({ "plugin": [url(FILE)?, url(WORKFLOW_FILE)?], "permission": { CANARY: "deny" } }).to_string())
+    Some(json!({ "plugin": [url(FILE)?, url(WORKFLOW_FILE)?, url(PROXY_FILE)?], "permission": { CANARY: "deny" } }).to_string())
 }
 
 #[cfg(test)]
@@ -45,6 +47,10 @@ mod tests {
         assert_eq!(
             config["plugin"][1],
             "file:///C:/Users/A%20User/AppData/Roaming/app.weft.desktop/plugins/weft-workflow.ts"
+        );
+        assert_eq!(
+            config["plugin"][2],
+            "file:///C:/Users/A%20User/AppData/Roaming/app.weft.desktop/plugins/weft-proxy.ts"
         );
         assert_eq!(config["permission"][CANARY], "deny");
     }

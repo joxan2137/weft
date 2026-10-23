@@ -153,6 +153,13 @@ export const IconImage = (p: IconProps) => (
   </Icon>
 )
 
+export const IconGlobe = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="8" cy="8" r="5.5" />
+    <path d="M2.5 8h11M8 2.5c2.1 2 2.1 9 0 11M8 2.5c-2.1 2-2.1 9 0 11" />
+  </Icon>
+)
+
 export const IconRefresh = (p: IconProps) => (
   <Icon {...p}>
     <path d="M13 8a5 5 0 1 1-1.5-3.6" />

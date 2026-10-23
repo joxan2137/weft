@@ -16,6 +16,7 @@ import type {
 import { errorMessage, isNotFound, type Api, type MessageWithParts } from "./api"
 import type { EngineState, SessionContent, SessionError, WeftState } from "./contract"
 import type { EngineEvent } from "./events"
+import { yoloEnabled } from "./yolo"
 
 const FIRST_PAGE = 40
 const OLDER_PAGE = 200
@@ -587,7 +588,7 @@ export function createWeftStore(api: Api) {
 
   // ───────── permissions and questions ─────────
 
-  function addRequest(kind: RequestKind, request: PermissionRequest | QuestionRequest) {
+  function queueRequest(kind: RequestKind, request: PermissionRequest | QuestionRequest) {
     setState(
       produce((draft) => {
         const lists = draft[kind] as Record<string, { id: string }[]>
@@ -597,6 +598,22 @@ export function createWeftStore(api: Api) {
         else list.splice(sortedIndex(list, request, byID), 0, request)
       }),
     )
+  }
+
+  function approvePermission(request: PermissionRequest, directory?: string) {
+    const at = state.info[request.sessionID]?.directory ?? directory ?? state.directory
+    void api.permission.reply(at, request.id, "once").catch((error) => {
+      warn("yolo permission")(error)
+      queueRequest("permissions", request)
+    })
+  }
+
+  function addRequest(kind: RequestKind, request: PermissionRequest | QuestionRequest, directory?: string) {
+    if (kind === "permissions" && yoloEnabled()) {
+      approvePermission(request as PermissionRequest, directory)
+      return
+    }
+    queueRequest(kind, request)
   }
 
   function removeRequest(kind: RequestKind, sessionID: string, requestID: string) {
@@ -610,6 +627,10 @@ export function createWeftStore(api: Api) {
   }
 
   function replaceRequests(kind: RequestKind, directory: string, requests: (PermissionRequest | QuestionRequest)[]) {
+    if (kind === "permissions" && yoloEnabled()) {
+      for (const request of requests) approvePermission(request as PermissionRequest, directory)
+      return
+    }
     setState(
       produce((draft) => {
         const lists = draft[kind] as Record<string, { id: string }[]>
@@ -857,7 +878,7 @@ export function createWeftStore(api: Api) {
         partDelta(payload.properties)
         return
       case "permission.asked":
-        addRequest("permissions", payload.properties)
+        addRequest("permissions", payload.properties, directory)
         return
       case "permission.replied":
         removeRequest("permissions", payload.properties.sessionID, payload.properties.requestID)

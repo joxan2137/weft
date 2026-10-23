@@ -1,6 +1,6 @@
 [package]
 name = "weft"
-version = "0.2.0"
+version = "0.3.0"
 description = "Weft, a desktop client for the opencode agent"
 license = "MIT"
 repository = "https://github.com/joxan2137/weft"
@@ -25,8 +25,9 @@ tauri-plugin-single-instance = "2.5"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["fs", "io-util", "macros", "process", "rt", "sync", "time"] }
-reqwest = { version = "0.12", default-features = false, features = ["native-tls", "json", "system-proxy"] }
+reqwest = { version = "0.12", default-features = false, features = ["native-tls", "json", "system-proxy", "socks"] }
 uuid = { version = "1", features = ["v4"] }
+fastrand = "2"
 sha2 = "0.10"
 base64 = "0.22"
 flate2 = "1"

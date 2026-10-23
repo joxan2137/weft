@@ -6,12 +6,33 @@ use tauri_plugin_store::StoreExt;
 
 const STORE: &str = "settings.json";
 const KEY: &str = "engine";
+const PROXY_KEY: &str = "proxy";
+
+const DEFAULT_MAX_LATENCY_MS: u64 = 2_000;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct EngineSettings {
     pub path: Option<String>,
     pub allow_migrate: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct ProxySettings {
+    pub enabled: bool,
+    pub custom: Option<String>,
+    pub max_latency_ms: u64,
+}
+
+impl Default for ProxySettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            custom: None,
+            max_latency_ms: DEFAULT_MAX_LATENCY_MS,
+        }
+    }
 }
 
 impl EngineSettings {
@@ -34,6 +55,17 @@ pub struct SettingsPatch {
     allow_migrate: Option<bool>,
 }
 
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProxyPatch {
+    #[serde(default)]
+    pub enabled: Option<bool>,
+    #[serde(default, deserialize_with = "present")]
+    pub custom: Option<Option<String>>,
+    #[serde(default)]
+    pub max_latency_ms: Option<u64>,
+}
+
 fn present<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<Option<String>>, D::Error> {
     Option::deserialize(deserializer).map(Some)
 }
@@ -44,6 +76,33 @@ pub fn load(app: &AppHandle) -> EngineSettings {
         .and_then(|store| store.get(KEY))
         .and_then(|value| serde_json::from_value(value).ok())
         .unwrap_or_default()
+}
+
+pub fn load_proxy(app: &AppHandle) -> ProxySettings {
+    app.store(STORE)
+        .ok()
+        .and_then(|store| store.get(PROXY_KEY))
+        .and_then(|value| serde_json::from_value(value).ok())
+        .unwrap_or_default()
+}
+
+pub fn update_proxy(app: &AppHandle, patch: ProxyPatch) -> Result<ProxySettings, String> {
+    let mut settings = load_proxy(app);
+    if let Some(enabled) = patch.enabled {
+        settings.enabled = enabled;
+    }
+    if let Some(custom) = patch.custom {
+        settings.custom = custom
+            .map(|custom| custom.trim().to_owned())
+            .filter(|custom| !custom.is_empty());
+    }
+    if let Some(max_latency_ms) = patch.max_latency_ms {
+        settings.max_latency_ms = max_latency_ms.max(1);
+    }
+    let store = app.store(STORE).map_err(|error| error.to_string())?;
+    store.set(PROXY_KEY, serde_json::to_value(&settings).map_err(|error| error.to_string())?);
+    store.save().map_err(|error| error.to_string())?;
+    Ok(settings)
 }
 
 pub fn update(app: &AppHandle, patch: SettingsPatch) -> Result<EngineSettings, String> {
@@ -89,6 +148,19 @@ mod tests {
 
         let cleared: SettingsPatch = serde_json::from_str(r#"{"path":null}"#).unwrap();
         assert_eq!(cleared.path, Some(None));
+    }
+
+    #[test]
+    fn proxy_patch_keeps_absent_fields_and_clears_custom_with_null() {
+        let absent: ProxyPatch = serde_json::from_str(r#"{"enabled":true}"#).unwrap();
+        assert_eq!(absent.enabled, Some(true));
+        assert_eq!(absent.custom, None);
+
+        let cleared: ProxyPatch = serde_json::from_str(r#"{"custom":null}"#).unwrap();
+        assert_eq!(cleared.custom, Some(None));
+
+        let defaults: ProxySettings = serde_json::from_str("{}").unwrap();
+        assert_eq!(defaults.max_latency_ms, DEFAULT_MAX_LATENCY_MS);
     }
 
     #[test]

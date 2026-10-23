@@ -1,26 +1,29 @@
 import frauncesLicense from "@fontsource-variable/fraunces/LICENSE?raw"
 import geistLicense from "@fontsource-variable/geist/LICENSE?raw"
 import geistMonoLicense from "@fontsource-variable/geist-mono/LICENSE?raw"
-import { createResource, createSignal, For, Match, onCleanup, Show, Switch, type JSX } from "solid-js"
+import { createResource, createSignal, For, Match, onCleanup, onMount, Show, Switch, type JSX } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { Mark } from "../../art/Mark"
 import { version } from "../../../package.json"
 import notice from "../../assets/prompts/NOTICE.md?raw"
 import { useWeft } from "../../engine/context"
+import { setYolo, yoloEnabled } from "../../engine/yolo"
 import { setThemePreference, theme, themePreference, type ThemePreference } from "../../theme/theme"
-import { IconDrop, IconFile, IconFolder, IconKey, IconMoon, IconNeedle, IconRefresh, IconSun, IconTool } from "../icons"
+import { IconDrop, IconFile, IconFolder, IconGlobe, IconKey, IconMoon, IconNeedle, IconRefresh, IconSettle, IconSun, IconTool } from "../icons"
 import { Prose } from "../parts/Prose"
 import { inTauri, openExternal, openLogs } from "../platform"
 import { ask, type SettingsTab } from "./controller"
 import { Dialog } from "./Dialog"
 import { KeyHints } from "./list"
 import { reducedMotionPreference, setReducedMotion } from "./motion"
-import { toastError } from "./Toast"
+import { toast, toastError } from "./Toast"
 
-const TABS: SettingsTab[] = ["engine", "liberation", "appearance", "shortcuts", "about"]
+const TABS: SettingsTab[] = ["engine", "network", "agent", "liberation", "appearance", "shortcuts", "about"]
 
 const TAB_NAMES: Record<SettingsTab, string> = {
   engine: "Engine",
+  network: "Network",
+  agent: "Agent",
   liberation: "Liberation",
   appearance: "Appearance",
   shortcuts: "Shortcuts",
@@ -29,6 +32,8 @@ const TAB_NAMES: Record<SettingsTab, string> = {
 
 const TAB_ICONS: Record<SettingsTab, () => typeof IconTool> = {
   engine: () => IconTool,
+  network: () => IconGlobe,
+  agent: () => IconSettle,
   liberation: () => IconNeedle,
   appearance: () => (theme() === "dark" ? IconMoon : IconSun),
   shortcuts: () => IconKey,
@@ -140,6 +145,12 @@ export function Settings(props: { onClose: () => void; tab?: SettingsTab }) {
           <Match when={tab() === "engine"}>
             <EnginePage />
           </Match>
+          <Match when={tab() === "network"}>
+            <NetworkPage />
+          </Match>
+          <Match when={tab() === "agent"}>
+            <AgentPage />
+          </Match>
           <Match when={tab() === "liberation"}>
             <LiberationPage />
           </Match>
@@ -231,6 +242,322 @@ function engineNotice() {
     if (!heard) setNotice(status.notice)
   })().catch(() => undefined)
   return notice
+}
+
+type ProxyScan = {
+  tested: number
+  working: number
+  failed: number
+  transport: number
+  status: number
+  quota: number
+  slow: number
+}
+
+type ProxyStatus = {
+  enabled: boolean
+  source: "none" | "custom" | "pool"
+  count: number
+  hasCustom: boolean
+  custom?: string
+  current?: string
+  currentLatencyMs?: number
+  currentCountry?: string
+  currentCountryCode?: string
+  fastestMs?: number
+  slowestMs?: number
+  refreshing: boolean
+  rescanCooldownMs?: number
+  maxLatencyMs: number
+  scanTotal: number
+  scanTested: number
+  scanWorking: number
+  lastScan?: ProxyScan
+  lastScanAt?: number
+  lastError?: string
+}
+
+function NetworkPage() {
+  const { actions } = useWeft()
+  const [busy, setBusy] = createSignal(false)
+  const [custom, setCustom] = createSignal("")
+  const [latency, setLatency] = createSignal("")
+  const [status, { mutate: setStatus, refetch }] = createResource(async () => {
+    if (!inTauri) return undefined
+    const { invoke } = await import("@tauri-apps/api/core")
+    const next = await invoke<ProxyStatus>("proxy_status")
+    if (!latency()) setLatency(String(next.maxLatencyMs))
+    return next
+  })
+
+  onMount(() => {
+    if (!inTauri) return
+    const timer = window.setInterval(() => {
+      const current = status()
+      if (busy()) return
+      if (current?.enabled || current?.refreshing) refetch()
+    }, 2000)
+    onCleanup(() => window.clearInterval(timer))
+  })
+
+  const state = () => {
+    const current = status()
+    if (!current?.enabled) return { label: "Off", dot: "" }
+    if (current.source === "custom") return { label: "Ready", dot: "ready" }
+    if (current.refreshing && current.count === 0) return { label: "Scanning", dot: "starting" }
+    if (current.count > 0) return { label: "Ready", dot: "ready" }
+    if (current.lastError) return { label: "No proxies", dot: "error" }
+    if (current.refreshing) return { label: "Scanning", dot: "starting" }
+    return { label: "Idle", dot: "" }
+  }
+
+  const scanLine = () => {
+    const current = status()
+    if (!current) return "-"
+    if (current.source === "custom") return "Not used with a custom proxy"
+    if (current.refreshing) return `${current.scanWorking} working of ${current.scanTested} tested, ${current.scanTotal} found`
+    const last = current.lastScan
+    if (!last) return "Not scanned yet"
+    return `${last.working} working of ${last.tested} tested, ${last.failed} failed`
+  }
+
+  async function call(command: string, args?: Record<string, unknown>) {
+    const { invoke } = await import("@tauri-apps/api/core")
+    return invoke<ProxyStatus>(command, args)
+  }
+
+  async function saveEnabled(on: boolean) {
+    setBusy(true)
+    try {
+      setStatus(await call("proxy_set_enabled", { enabled: on }))
+      await actions.restartEngine()
+      refetch()
+      toast(on ? "Zen proxy on. The engine restarted." : "Zen proxy off. The engine restarted.")
+    } catch (error) {
+      toastError(error)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function applyCustom(address = custom().trim()) {
+    setBusy(true)
+    try {
+      const wasEnabled = status()?.enabled ?? false
+      const wasCustom = status()?.hasCustom ?? false
+      const next = await call("proxy_set_custom", { custom: address || null })
+      setStatus(next)
+      if (next.enabled && (wasEnabled !== next.enabled || wasCustom !== next.hasCustom)) {
+        await actions.restartEngine()
+      }
+      setCustom("")
+      refetch()
+      toast(next.hasCustom ? "Custom proxy set." : next.enabled ? "Custom proxy cleared. Using the pool." : "Custom proxy cleared.", "success")
+    } catch (error) {
+      toastError(error)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function applyLatency() {
+    const ms = Number(latency())
+    if (!Number.isFinite(ms) || ms <= 0 || ms > 600_000) return toast("Enter 1 to 600000 milliseconds.", "warn")
+    setBusy(true)
+    try {
+      const next = await call("proxy_set_max_latency", { maxLatencyMs: Math.floor(ms) })
+      setStatus(next)
+      setLatency(String(next.maxLatencyMs))
+      toast("Latency cap updated.", "success")
+    } catch (error) {
+      toastError(error)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function refreshPool() {
+    setBusy(true)
+    try {
+      setStatus(await call("proxy_refresh"))
+      refetch()
+    } catch (error) {
+      toastError(error)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section class="settings-sec">
+      <header class="settings-head">
+        <h3 class="settings-title">Network</h3>
+        <span class={`state ${state().dot}`}>
+          <span class={`dot ${state().dot}`} /> {state().label}
+        </span>
+      </header>
+      <p class="settings-text">
+        Routes opencode zen requests through a rotating pool of public SOCKS proxies. Other providers and all other
+        traffic keep their normal connection.
+      </p>
+      <Show
+        when={inTauri}
+        fallback={<p class="settings-text dim">Proxy settings are managed in the desktop app.</p>}
+      >
+        <Show when={status()}>
+          {(current) => (
+            <>
+              <ul class="ledger settings-ledger">
+                <li>
+                  <span>Source</span>
+                  <span class="num">
+                    {current().source === "custom" ? "Custom proxy" : current().source === "pool" ? "Rotating pool" : "None"}
+                  </span>
+                </li>
+                <li>
+                  <span>Current</span>
+                  <span class="num mono selectable">{current().current ?? "-"}</span>
+                </li>
+                <li>
+                  <span>Latency</span>
+                  <span class="num">
+                    {current().currentLatencyMs ? `${current().currentLatencyMs} ms` : "-"}
+                    <Show when={current().fastestMs}>
+                      {current().count > 1 ? ` (${current().fastestMs}-${current().slowestMs} ms pool)` : ""}
+                    </Show>
+                  </span>
+                </li>
+                <li>
+                  <span>Exit</span>
+                  <span class="num">
+                    {current().currentCountry
+                      ? `${current().currentCountry} ${current().currentCountryCode ?? ""}`.trim()
+                      : "-"}
+                  </span>
+                </li>
+                <li>
+                  <span>Pool</span>
+                  <span class="num">
+                    {current().source === "custom" ? "1 custom" : `${current().count} proxies`}
+                  </span>
+                </li>
+                <li>
+                  <span>Scan</span>
+                  <span class="num">{scanLine()}</span>
+                </li>
+              </ul>
+              <Show when={current().lastError}>
+                <p class="dlg-error">{current().lastError}</p>
+              </Show>
+              <Show when={current().enabled}>
+                <p class="dlg-note warn">
+                  Free proxies are untrusted exit nodes. They can see which host a request goes to, never its TLS
+                  contents. Weft sends only opencode zen traffic through them.
+                </p>
+              </Show>
+            </>
+          )}
+        </Show>
+        <div class="settings-card">
+          <Setting
+            name="Use rotating proxies for opencode zen"
+            hint="Fetches public SOCKS lists, keeps the fastest working proxies, and rotates when one fails. Changing this restarts the engine."
+          >
+            <Toggle
+              on={status()?.enabled ?? false}
+              label="Use rotating proxies for opencode zen"
+              disabled={busy()}
+              onChange={(on) => void saveEnabled(on)}
+            />
+          </Setting>
+          <Setting
+            name="Custom proxy"
+            hint={
+              <>
+                Overrides the pool. Supports <span class="mono">socks5://</span>, <span class="mono">socks4://</span> and{" "}
+                <span class="mono">http://</span>, with optional <span class="mono">user:pass@</span>.
+                <Show when={status()?.custom}>
+                  {(value) => (
+                    <>
+                      <br />
+                      Current: <span class="mono selectable">{value()}</span>
+                    </>
+                  )}
+                </Show>
+              </>
+            }
+          >
+            <input
+              class="settings-input"
+              value={custom()}
+              placeholder={status()?.custom ?? "socks5://host:port"}
+              spellcheck={false}
+              autocomplete="off"
+              aria-label="Custom proxy address"
+              disabled={busy()}
+              onInput={(event) => setCustom(event.currentTarget.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault()
+                  void applyCustom()
+                }
+              }}
+            />
+            <Show when={status()?.hasCustom}>
+              <button
+                class="btn ghost"
+                disabled={busy()}
+                onClick={() => {
+                  setCustom("")
+                  void applyCustom("")
+                }}
+              >
+                Clear
+              </button>
+            </Show>
+            <button class="btn" disabled={busy()} onClick={() => void applyCustom()}>
+              Apply
+            </button>
+          </Setting>
+          <Setting name="Maximum latency" hint="Drops proxies slower than this during a scan. The pool keeps only the fastest 25.">
+            <input
+              class="settings-input narrow"
+              type="number"
+              min="1"
+              max="600000"
+              step="100"
+              value={latency()}
+              aria-label="Maximum proxy latency in milliseconds"
+              disabled={busy()}
+              onInput={(event) => setLatency(event.currentTarget.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault()
+                  void applyLatency()
+                }
+              }}
+            />
+            <span class="setting-hint">ms</span>
+            <button class="btn" disabled={busy()} onClick={() => void applyLatency()}>
+              Apply
+            </button>
+          </Setting>
+          <Setting
+            name="Refresh pool"
+            hint={`Scans the public lists again. ${status()?.refreshing ? "A scan is running now." : "A manual scan ignores the usual cooldown."}`}
+          >
+            <button
+              class="btn"
+              disabled={busy() || !status()?.enabled || status()?.hasCustom || status()?.refreshing}
+              onClick={() => void refreshPool()}
+            >
+              <IconRefresh size={14} /> {status()?.refreshing ? "Scanning" : "Refresh"}
+            </button>
+          </Setting>
+        </div>
+      </Show>
+    </section>
+  )
 }
 
 function EnginePage() {
@@ -417,6 +744,47 @@ function EnginePage() {
             {(logs() ?? []).slice(-400).join("\n") || "No output yet."}
           </Show>
         </pre>
+      </Show>
+    </section>
+  )
+}
+
+function AgentPage() {
+  const { state, actions } = useWeft()
+
+  function setMode(on: boolean) {
+    setYolo(on)
+    if (!on) return
+    for (const requests of Object.values(state.permissions))
+      for (const request of requests) void actions.replyPermission(request.sessionID, request.id, "once").catch(toastError)
+  }
+
+  return (
+    <section class="settings-sec">
+      <header class="settings-head">
+        <h3 class="settings-title">Agent</h3>
+        <Show when={yoloEnabled()}>
+          <span class="state error">
+            <span class="dot error" /> YOLO
+          </span>
+        </Show>
+      </header>
+      <p class="settings-text">
+        How much the agent may do on its own. Permission requests still come back to Weft; YOLO mode answers them as they arrive.
+      </p>
+      <div class="settings-card">
+        <Setting
+          name="YOLO mode"
+          hint="Approves every tool permission automatically, including file edits, commands and reads outside the project. Questions still stop for you."
+        >
+          <Toggle on={yoloEnabled()} label="YOLO mode" onChange={setMode} />
+        </Setting>
+      </div>
+      <Show when={yoloEnabled()}>
+        <p class="dlg-note bad">
+          YOLO mode is on. The agent can run any command and change any file the engine can reach without asking first. Turn it off before
+          handing the machine to a session you do not trust.
+        </p>
       </Show>
     </section>
   )

@@ -26,6 +26,7 @@ pub use state::EngineState;
 
 use crate::applog;
 use crate::paths::AppPaths;
+use crate::proxy::Proxy;
 use crate::settings::{self, EngineSettings};
 use activity::Instances;
 use follow::{Backoff, Decision};
@@ -305,7 +306,8 @@ async fn launch(
     std::fs::create_dir_all(&paths.observed)
         .or_fail(ErrorKind::Config, "creating the observed dir")?;
 
-    let env = engine_env(&paths, config_content, desktop.is_some());
+    let proxy_env = app.state::<Proxy>().engine_env(app).await;
+    let env = engine_env(&paths, config_content, desktop.is_some(), proxy_env);
     let launch = Launch {
         exe: &exe,
         cwd: &paths.home,
@@ -458,6 +460,7 @@ fn engine_env(
     paths: &AppPaths,
     config_content: String,
     share_desktop_state: bool,
+    extra: Vec<(&'static str, OsString)>,
 ) -> Vec<(&'static str, OsString)> {
     let mut env = vec![
         ("OPENCODE_CONFIG_CONTENT", config_content.into()),
@@ -473,5 +476,6 @@ fn engine_env(
         // config installs between the two engines. Like Desktop, an inherited value wins.
         env.push(("XDG_STATE_HOME", paths.desktop_state.clone().into()));
     }
+    env.extend(extra);
     env
 }

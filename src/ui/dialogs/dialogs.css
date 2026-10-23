@@ -1151,6 +1151,35 @@
   align-items: center;
   gap: 8px;
 }
+.settings-input {
+  width: 170px;
+  height: 30px;
+  padding: 0 9px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-code);
+  font-size: 11.5px;
+}
+.settings-input.narrow {
+  width: 78px;
+  text-align: right;
+}
+.settings-input::placeholder {
+  color: var(--ink-3);
+}
+.settings-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-wash);
+}
+.settings-input:disabled {
+  opacity: 0.6;
+}
+.setting-control .setting-hint {
+  margin-right: 2px;
+}
 .theme-seg button {
   height: 30px;
   padding: 0 14px;

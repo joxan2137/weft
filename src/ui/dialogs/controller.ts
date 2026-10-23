@@ -1,7 +1,7 @@
 import { createSignal } from "solid-js"
 import type { ModelRef } from "./catalog"
 
-export type SettingsTab = "engine" | "liberation" | "appearance" | "shortcuts" | "about"
+export type SettingsTab = "engine" | "network" | "agent" | "liberation" | "appearance" | "shortcuts" | "about"
 
 export type DialogRequest =
   | { kind: "palette" }

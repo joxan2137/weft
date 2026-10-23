@@ -10,6 +10,7 @@ use crate::applog;
 use crate::engine::{self, Engine, EngineState, LegacyDesktop};
 use crate::observed;
 use crate::paths::AppPaths;
+use crate::proxy::{self, Proxy};
 use crate::settings::{self, EngineSettings, SettingsPatch};
 
 type CommandResult<T> = Result<T, String>;
@@ -68,6 +69,32 @@ pub async fn engine_set_settings(
     };
     let patch = SettingsPatch::deserialize(body).map_err(|error| error.to_string())?;
     settings::update(&app, patch)
+}
+
+#[tauri::command]
+pub async fn proxy_status(proxy: State<'_, Proxy>) -> CommandResult<proxy::Status> {
+    Ok(proxy.status())
+}
+
+#[tauri::command]
+pub async fn proxy_set_enabled(app: AppHandle, proxy: State<'_, Proxy>, enabled: bool) -> CommandResult<proxy::Status> {
+    proxy.set_enabled(&app, enabled).await
+}
+
+#[tauri::command]
+pub async fn proxy_refresh(proxy: State<'_, Proxy>) -> CommandResult<proxy::Status> {
+    proxy.refresh();
+    Ok(proxy.status())
+}
+
+#[tauri::command]
+pub async fn proxy_set_custom(app: AppHandle, proxy: State<'_, Proxy>, custom: Option<String>) -> CommandResult<proxy::Status> {
+    proxy.set_custom(&app, custom).await
+}
+
+#[tauri::command]
+pub async fn proxy_set_max_latency(app: AppHandle, proxy: State<'_, Proxy>, max_latency_ms: u64) -> CommandResult<proxy::Status> {
+    proxy.set_max_latency(&app, max_latency_ms).await
 }
 
 #[tauri::command]

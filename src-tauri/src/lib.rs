@@ -3,6 +3,7 @@ mod commands;
 mod engine;
 mod observed;
 mod paths;
+mod proxy;
 mod settings;
 mod window;
 
@@ -11,6 +12,7 @@ use tauri::{AppHandle, Manager, RunEvent, WindowEvent};
 use tauri_plugin_window_state::StateFlags;
 
 use engine::Engine;
+use proxy::Proxy;
 
 pub fn run() {
     let context = tauri::generate_context!();
@@ -48,12 +50,18 @@ pub fn run() {
                 .build(),
         )
         .manage(Engine::default())
+        .manage(Proxy::default())
         .invoke_handler(tauri::generate_handler![
             commands::engine_status,
             commands::engine_restart,
             commands::engine_logs,
             commands::engine_settings,
             commands::engine_set_settings,
+            commands::proxy_status,
+            commands::proxy_set_enabled,
+            commands::proxy_refresh,
+            commands::proxy_set_custom,
+            commands::proxy_set_max_latency,
             commands::app_info,
             commands::open_logs,
             commands::save_text_file,
@@ -76,6 +84,10 @@ pub fn run() {
             tauri::async_runtime::spawn(async move {
                 handle.state::<Engine>().boot(handle.clone()).await;
             });
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                handle.state::<Proxy>().boot(&handle).await;
+            });
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -91,7 +103,10 @@ pub fn run() {
     match app {
         Ok(app) => app.run(|app, event| {
             if let RunEvent::Exit = event {
-                tauri::async_runtime::block_on(app.state::<Engine>().stop());
+                tauri::async_runtime::block_on(async {
+                    app.state::<Engine>().stop().await;
+                    app.state::<Proxy>().stop().await;
+                });
                 applog::line("weft", "Weft closed");
             }
         }),
@@ -104,11 +119,9 @@ pub fn run() {
 fn stays_in_app(url: &tauri::Url) -> bool {
     match url.scheme() {
         "tauri" => true,
-        "http" | "https" => match url.host_str() {
-            Some("tauri.localhost") => true,
-            Some("localhost") => cfg!(debug_assertions),
-            _ => false,
-        },
+        "http" | "https" => url.host_str().is_some_and(|host| {
+            host == "tauri.localhost" || (host == "localhost" && cfg!(debug_assertions))
+        }),
         _ => false,
     }
 }

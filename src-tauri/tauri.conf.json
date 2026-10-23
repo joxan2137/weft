@@ -57,6 +57,7 @@
     "resources": {
       "../plugin/weft-liberated.ts": "opencode/plugins/weft-liberated.ts",
       "../plugin/weft-workflow.ts": "opencode/plugins/weft-workflow.ts",
+      "../plugin/weft-proxy.ts": "opencode/plugins/weft-proxy.ts",
       "../licenses": "licenses",
       "../LICENSE": "licenses/LICENSE-weft.txt"
     },
