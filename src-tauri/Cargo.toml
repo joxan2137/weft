@@ -1,6 +1,6 @@
 [package]
 name = "weft"
-version = "0.4.0"
+version = "0.4.1"
 description = "Weft, a desktop client for the opencode agent"
 license = "MIT"
 repository = "https://github.com/joxan2137/weft"

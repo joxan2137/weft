@@ -1,10 +1,15 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
-use rusqlite::{Connection, OpenFlags};
+use rusqlite::{Connection, ErrorCode, OpenFlags};
 
 use super::probe;
 use super::state::{ErrorKind, Failure, OrFail};
+
+/// An engine that was just killed can still hold the DB's WAL and shared-memory files for a moment.
+const RELEASE_RETRIES: u32 = 10;
+const RELEASE_PAUSE: Duration = Duration::from_millis(300);
 
 /// The `opencode.db` an engine with an unmodified XDG data dir opens, shared with OpenCode Desktop.
 pub fn shared_db(home: &Path) -> PathBuf {
@@ -29,7 +34,7 @@ pub async fn guard(
         return Ok(());
     }
     let path = db.to_path_buf();
-    let applied = tauri::async_runtime::spawn_blocking(move || applied(&path))
+    let applied = tauri::async_runtime::spawn_blocking(move || applied_once_released(&path))
         .await
         .or_fail(ErrorKind::MigrationCheck, "reading the opencode database")?
         .or_fail(ErrorKind::MigrationCheck, "reading the opencode database")?;
@@ -111,6 +116,25 @@ impl Skew {
 }
 
 /// `None` when the DB does not exist or has no `session` table, so there is nothing to migrate.
+fn applied_once_released(db: &Path) -> rusqlite::Result<Option<Applied>> {
+    let mut retries = 0;
+    loop {
+        match applied(db) {
+            Err(rusqlite::Error::SqliteFailure(error, _))
+                if retries < RELEASE_RETRIES
+                    && matches!(
+                        error.code,
+                        ErrorCode::SystemIoFailure | ErrorCode::DatabaseBusy | ErrorCode::DatabaseLocked
+                    ) =>
+            {
+                retries += 1;
+                std::thread::sleep(RELEASE_PAUSE);
+            }
+            result => return result,
+        }
+    }
+}
+
 fn applied(db: &Path) -> rusqlite::Result<Option<Applied>> {
     if !db.is_file() {
         return Ok(None);

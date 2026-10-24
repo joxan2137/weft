@@ -749,6 +749,18 @@ async function scenario() {
     await until(`!document.querySelector(".dialog.settings")`, 5_000, "Settings to close")
   })
 
+  await check("network: the proxy commands pass the app's ACL and the Network tab shows their status", async () => {
+    const status = await invoke("proxy_status")
+    assert(typeof status?.enabled === "boolean", `proxy_status answered ${js(status)}`)
+    await press(",", { ctrl: true })
+    await until(`!!document.querySelector(".dialog.settings:not(.leaving)")`, 5_000, "the Settings dialog")
+    await click(`[...document.querySelectorAll(".settings-nav [role=tab]")].find((t) => t.textContent.trim() === "Network")`, "the Network tab")
+    await until(`[...document.querySelectorAll(".dialog.settings .settings-ledger li span")].some((s) => s.textContent.trim() === "Source")`, 5_000, "the proxy status")
+    await press("Escape")
+    await until(`!document.querySelector(".dialog.settings")`, 5_000, "Settings to close")
+    return status.enabled ? `on (${status.source})` : "off"
+  })
+
   await check("page: no uncaught exceptions or console errors", () => {
     assert(pageErrors.length === 0, `${pageErrors.length}: ${pageErrors.slice(0, 3).join(" | ")}`)
   })

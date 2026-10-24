@@ -1,7 +1,7 @@
 {
   "name": "weft",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "A liberated desktop client for the opencode coding agent",
   "repository": {
     "type": "git",
