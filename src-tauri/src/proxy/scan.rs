@@ -39,6 +39,7 @@ pub(crate) async fn run(inner: Arc<Inner>) {
         scan.working = 0;
         scan.last_error = None;
     }
+    write(&inner.pool).evicted.clear();
     applog::line("proxy", "scan started");
     let candidates = fetch_candidates(&inner).await;
     let total = candidates.len();
@@ -142,6 +143,7 @@ pub(crate) async fn run(inner: Arc<Inner>) {
 
     let mut pool = write(&inner.pool);
     pool.last_refresh = Some(Instant::now());
+    kept.retain(|entry| !pool.evicted.contains(&entry.url));
     if enabled && !kept.is_empty() {
         applog::line(
             "proxy",
@@ -152,9 +154,10 @@ pub(crate) async fn run(inner: Arc<Inner>) {
                 kept[0].latency_ms
             ),
         );
+        pool.strikes
+            .retain(|url, _| kept.iter().any(|entry| &entry.url == url));
         pool.entries = kept;
         pool.cursor = 0;
-        pool.strikes.clear();
         lock(&inner.scan).last_error = None;
     } else if enabled {
         applog::line(
@@ -178,7 +181,7 @@ fn spawn_probe(
 
 fn add_live(inner: &Inner, entry: Entry) {
     let mut pool = write(&inner.pool);
-    if pool.entries.iter().any(|kept| kept.url == entry.url) {
+    if pool.evicted.contains(&entry.url) || pool.entries.iter().any(|kept| kept.url == entry.url) {
         return;
     }
     pool.entries.push(entry);
@@ -228,9 +231,14 @@ async fn probe(inner: Arc<Inner>, candidate: String, max_latency_ms: u64) -> Out
     match response.status().as_u16() {
         429 => return Outcome::Quota,
         408 | 425 | 500..=599 => return Outcome::Transport,
-        _ => {}
+        200..=299 => {}
+        _ => {
+            let body = response.text().await.unwrap_or_default();
+            if !body.contains(ZEN_FREE_TIER_ERROR) {
+                return Outcome::Status;
+            }
+        }
     }
-    drop(response);
 
     let geo = lookup_country(&inner, &proxy.host).await;
     if let Some(geo) = &geo

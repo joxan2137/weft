@@ -406,6 +406,9 @@ function mockActions(state: WeftState, set: SetStoreFunction<WeftState>): Action
     insertAfter: nothing,
     move: nothing,
     resendFrom: nothing,
+    seamPreview: () => Promise.reject(new Error("mock engine: no seams")),
+    seamSession: () => Promise.reject(new Error("mock engine: no seams")),
+    unseamSession: nothing,
   }
 }
 

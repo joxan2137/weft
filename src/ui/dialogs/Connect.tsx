@@ -2,6 +2,8 @@ import type { Provider, ProviderAuthMethod } from "@opencode-ai/sdk/v2/types"
 import { createEffect, createMemo, createSignal, For, Match, on, onCleanup, Show, Switch } from "solid-js"
 import { HttpError, type OAuthStart } from "../../engine/contract"
 import { useWeft } from "../../engine/context"
+import { LITHOS_ID, LITHOS_URL, withLithos } from "../../engine/lithos"
+import { OPEN_GATEWAY_ID, OPEN_GATEWAY_URL, withOpenGateway } from "../../engine/opengateway"
 import { IconCheck, IconCopy, IconOpen } from "../icons"
 import { copyText, openExternal } from "../platform"
 import { POPULAR, best, fuzzy, sortProviders, usableModels } from "./catalog"
@@ -71,10 +73,11 @@ function ConnectBody(props: ConnectProps) {
   const dialog = useDialog()
   const [query, setQuery] = createSignal("")
   const connected = () => new Set(state.providers.connected)
+  const providers = createMemo(() => withLithos(withOpenGateway(state.providers.all)))
 
   const groups = createMemo(() => {
     const q = query().trim()
-    const sorted = sortProviders(state.providers.all, state.providers.connected)
+    const sorted = sortProviders(providers(), state.providers.connected)
     const matched = sorted
       .map((p) => {
         const m = best(fuzzy(q, p.name), fuzzy(q, p.id))
@@ -107,7 +110,7 @@ function ConnectBody(props: ConnectProps) {
   )
   createEffect(on(nav.cursor, (i) => flat()[i] && setSelectedID(flat()[i].provider.id), { defer: true }))
 
-  const selected = createMemo(() => state.providers.all.find((p) => p.id === selectedID()))
+  const selected = createMemo(() => providers().find((p) => p.id === selectedID()))
 
   return (
     <>
@@ -119,7 +122,7 @@ function ConnectBody(props: ConnectProps) {
             value={query()}
             onInput={setQuery}
             onKeyDown={(e) => nav.onKey(e, () => document.querySelector<HTMLElement>(".connect [data-flow-start]")?.focus())}
-            count={`${flat().length} of ${state.providers.all.length}`}
+            count={`${flat().length} of ${providers().length}`}
           />
           <div class="dlg-list" ref={nav.bind} role="listbox" aria-label="Providers">
             <For each={groups()}>
@@ -310,6 +313,25 @@ function ProviderDetail(props: { provider: Provider }) {
               opencode.ai/zen
             </button>
             .
+          </p>
+        </Match>
+        <Match when={id() === OPEN_GATEWAY_ID}>
+          <p class="dlg-note">
+            OpenGateway is one OpenAI-compatible endpoint for models from OpenAI, Anthropic, Google and others. Get a key at{" "}
+            <button class="link" onClick={() => openExternal(OPEN_GATEWAY_URL)}>
+              opengateway.ai
+            </button>
+            . Weft adds the provider to its own engine, so your opencode config stays untouched.
+          </p>
+        </Match>
+        <Match when={id() === LITHOS_ID}>
+          <p class="dlg-note">
+            LithosAI is one OpenAI-compatible endpoint for open models such as Kimi K3, DeepSeek V4.1 Flash and
+            GLM-5.3, served in three speed tiers. Get a key at{" "}
+            <button class="link" onClick={() => openExternal(LITHOS_URL)}>
+              console.lithosai.cloud
+            </button>
+            . Weft adds the provider to its own engine, so your opencode config stays untouched.
           </p>
         </Match>
         <Match when={id() === "anthropic"}>

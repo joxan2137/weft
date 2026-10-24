@@ -148,6 +148,12 @@ Your words are set in Fraunces, the model and the interface in Geist, and code i
   the database under Desktop. Engines are cached in `%LOCALAPPDATA%\app.weft.desktop\engines`.
 - The UI talks to the engine's own HTTP API. Providers, logins (API keys, ChatGPT, Copilot,
   GitLab…), OpenCode Zen and Go, agents, MCP, tools and permissions are exactly opencode's.
+- **OpenGateway** is built in: connect it from Providers with a key from
+  [opengateway.ai](https://opengateway.ai) and its OpenAI-compatible models appear beside the
+  others. Weft adds the provider to its own engine only; your opencode config is left alone.
+- **LithosAI** is built in too: connect it with a key from
+  [console.lithosai.cloud](https://console.lithosai.cloud) to use Kimi K3, DeepSeek V4.1 Flash and
+  GLM-5.3 in their Base, Fast and Ultra speed tiers, each with low, high and max reasoning effort.
 - Edits live in `session.metadata.weft`. A small engine plugin (`plugin/weft-liberated.ts`) applies
   them to every model call: the edited system prompt (with `{{environment}}`, `{{instructions}}`,
   `{{skills}}`… expanding to what opencode would have sent), role changes, order, settled messages

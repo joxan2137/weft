@@ -28,7 +28,21 @@ pub fn copy_bundled(from: &Path, to: &Path) -> io::Result<()> {
 /// replace them. Denying the canary keeps it out of model requests but listed in tool ids.
 pub fn config_content(plugin_dir: &Path) -> Option<String> {
     let url = |file: &str| Url::from_file_path(plugin_dir.join(file)).ok().map(String::from);
-    Some(json!({ "plugin": [url(FILE)?, url(WORKFLOW_FILE)?, url(PROXY_FILE)?], "permission": { CANARY: "deny" } }).to_string())
+    let mut config = json!({
+        "plugin": [url(FILE)?, url(WORKFLOW_FILE)?, url(PROXY_FILE)?],
+        "permission": { CANARY: "deny" },
+    });
+    let mut providers = serde_json::Map::new();
+    if let Some(provider) = super::opengateway::provider() {
+        providers.insert(super::opengateway::ID.to_string(), provider);
+    }
+    if let Some(provider) = super::lithos::provider() {
+        providers.insert(super::lithos::ID.to_string(), provider);
+    }
+    if !providers.is_empty() {
+        config["provider"] = serde_json::Value::Object(providers);
+    }
+    Some(config.to_string())
 }
 
 #[cfg(test)]
@@ -53,6 +67,10 @@ mod tests {
             "file:///C:/Users/A%20User/AppData/Roaming/app.weft.desktop/plugins/weft-proxy.ts"
         );
         assert_eq!(config["permission"][CANARY], "deny");
+        assert_eq!(config["provider"]["opengateway"]["name"], "OpenGateway");
+        assert!(config["provider"]["opengateway"]["models"].as_object().unwrap().len() > 10);
+        assert_eq!(config["provider"]["lithosai"]["name"], "LithosAI");
+        assert!(config["provider"]["lithosai"]["models"].as_object().unwrap().len() >= 6);
     }
 
     #[test]

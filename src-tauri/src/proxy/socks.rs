@@ -91,7 +91,7 @@ async fn socks5(
     let auth = upstream
         .username
         .as_deref()
-        .zip(upstream.password.as_deref());
+        .map(|username| (username, upstream.password.as_deref().unwrap_or("")));
     let methods: &[u8] = if auth.is_some() { &[0, 2] } else { &[0] };
     let mut greeting = vec![5, methods.len() as u8];
     greeting.extend_from_slice(methods);
@@ -99,6 +99,11 @@ async fn socks5(
 
     let mut choice = [0u8; 2];
     stream.read_exact(&mut choice).await?;
+    if choice[0] == b'H' {
+        return Err(invalid(
+            "the proxy answered over HTTP, enter it as http://host:port",
+        ));
+    }
     if choice[0] != 5 {
         return Err(invalid("the SOCKS5 proxy answered with another version"));
     }

@@ -20,6 +20,7 @@ import type {
   Todo,
   VcsInfo,
 } from "@opencode-ai/sdk/v2/types"
+import type { Seam, SeamCard } from "./seam"
 import type { Role } from "./view"
 
 // ───────── transport ─────────
@@ -206,4 +207,11 @@ export interface Actions {
   move(sessionID: string, messageID: string, beforeMessageID: string | undefined): Promise<void>
   /** `partID`: the prose part the editor changed; the message's other parts are kept as they are. */
   resendFrom(sessionID: string, userMessageID: string, text: string, partID?: string): Promise<void>
+
+  // seam: a hand-off taken between turns (seam.ts)
+  /** Builds the card without storing it, for the review dialog. */
+  seamPreview(sessionID: string, keepFrom?: string): Promise<Seam>
+  /** Elides every message before `keepFrom` (or a quarter of the window when omitted) and pins the card. */
+  seamSession(sessionID: string, keepFrom?: string, card?: SeamCard): Promise<Seam>
+  unseamSession(sessionID: string): Promise<void>
 }

@@ -1,0 +1,101 @@
+[
+  {
+    "id": "moonshotai/Kimi-K3",
+    "name": "Kimi K3",
+    "context": 1048576,
+    "maxOutput": 32768,
+    "input": ["text"],
+    "output": ["text"],
+    "reasoning": true,
+    "variants": ["low", "high", "max"],
+    "cost": { "input": 2.4, "output": 12, "cacheRead": 0.24 }
+  },
+  {
+    "id": "moonshotai/Kimi-K3-fast",
+    "name": "Kimi K3 fast",
+    "context": 1048576,
+    "maxOutput": 32768,
+    "input": ["text"],
+    "output": ["text"],
+    "reasoning": true,
+    "variants": ["low", "high", "max"],
+    "cost": { "input": 4, "output": 20, "cacheRead": 0.4 }
+  },
+  {
+    "id": "moonshotai/Kimi-K3-ultra",
+    "name": "Kimi K3 ultra",
+    "context": 1048576,
+    "maxOutput": 32768,
+    "input": ["text"],
+    "output": ["text"],
+    "reasoning": true,
+    "variants": ["low", "high", "max"],
+    "cost": { "input": 5.6, "output": 28, "cacheRead": 0.56 }
+  },
+  {
+    "id": "deepseek-ai/DeepSeek-V4.1-Flash",
+    "name": "DeepSeek V4.1 Flash",
+    "context": 1048576,
+    "maxOutput": 32768,
+    "input": ["text"],
+    "output": ["text"],
+    "reasoning": true,
+    "variants": ["low", "high", "max"],
+    "cost": { "input": 0.15, "output": 0.6, "cacheRead": 0.003 }
+  },
+  {
+    "id": "deepseek-ai/DeepSeek-V4.1-Flash-fast",
+    "name": "DeepSeek V4.1 Flash fast",
+    "context": 1048576,
+    "maxOutput": 32768,
+    "input": ["text"],
+    "output": ["text"],
+    "reasoning": true,
+    "variants": ["low", "high", "max"],
+    "cost": { "input": 0.25, "output": 1, "cacheRead": 0.005 }
+  },
+  {
+    "id": "deepseek-ai/DeepSeek-V4.1-Flash-ultra",
+    "name": "DeepSeek V4.1 Flash ultra",
+    "context": 1048576,
+    "maxOutput": 32768,
+    "input": ["text"],
+    "output": ["text"],
+    "reasoning": true,
+    "variants": ["low", "high", "max"],
+    "cost": { "input": 0.35, "output": 1.4, "cacheRead": 0.007 }
+  },
+  {
+    "id": "zai-org/GLM-5.3",
+    "name": "GLM-5.3",
+    "context": 1048576,
+    "maxOutput": 32768,
+    "input": ["text"],
+    "output": ["text"],
+    "reasoning": true,
+    "variants": ["low", "high", "max"],
+    "cost": { "input": 1.05, "output": 3.3, "cacheRead": 0.195 }
+  },
+  {
+    "id": "zai-org/GLM-5.3-Flash",
+    "name": "GLM-5.3 Flash",
+    "context": 1048576,
+    "maxOutput": 32768,
+    "input": ["text"],
+    "output": ["text"],
+    "reasoning": true,
+    "variants": ["low", "high", "max"],
+    "cost": { "input": 0.15, "output": 0.5, "cacheRead": 0.03 }
+  },
+  {
+    "id": "zai-org/GLM-5.3-Flash-ultra",
+    "name": "GLM-5.3 Flash ultra",
+    "context": 1048576,
+    "maxOutput": 32768,
+    "input": ["text"],
+    "output": ["text"],
+    "reasoning": true,
+    "variants": ["low", "high", "max"],
+    "cost": { "input": 0.3, "output": 1, "cacheRead": 0.06 }
+  }
+]

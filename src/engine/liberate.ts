@@ -2,6 +2,7 @@
 // operation. Type-only imports keep it loadable by plain Node for tools/e2e-liberation.mjs.
 import type { Message, Part, Session, TextPart, UserMessage } from "@opencode-ai/sdk/v2/types"
 import type { Actions, Http, SessionContent } from "./contract"
+import { buildSeam, seamProblem, type Seam } from "./seam"
 import type { Mend, PickView, Role } from "./view"
 
 export type WeftMeta = {
@@ -12,6 +13,8 @@ export type WeftMeta = {
   muted?: Record<string, true>
   thought?: Record<string, true>
   mends?: Record<string, Mend[]>
+  /** the hand-off card pinned at the end of the system prompt, and the message it starts keeping from */
+  seam?: Seam
 }
 
 /** The pieces opencode joins into its system prompt, as split by the plugin. */
@@ -52,6 +55,9 @@ export type LiberationActions = Pick<
   | "move"
   | "resendFrom"
   | "regenerate"
+  | "seamPreview"
+  | "seamSession"
+  | "unseamSession"
 >
 
 type Entry = { info: Message; parts: Part[] }
@@ -119,6 +125,7 @@ function compactMeta(meta: WeftMeta): WeftMeta {
   if (muted) next.muted = muted
   if (thought) next.thought = thought
   if (mends) next.mends = mends
+  if (meta.seam) next.seam = meta.seam
   return next
 }
 
@@ -271,6 +278,8 @@ export function deriveCloth(input: {
   const meta = readMeta(input.session)
   const newest = input.messages[input.messages.length - 1]
   const reverted = revertedIDs(input.messages, input.session.revert)
+  const seamAt = meta.seam ? input.messages.findIndex((m) => m.id === meta.seam?.keepFrom) : -1
+  const seamOf = new Map(input.messages.map((m, index) => [m.id, seamAt >= 0 && index < seamAt]))
   const replies = new Map<string, number>()
   for (const m of input.messages) if (m.role === "assistant") replies.set(m.parentID, (replies.get(m.parentID) ?? 0) + 1)
   const picks = clothOrder(input.messages, meta).flatMap((info): PickView[] => {
@@ -286,9 +295,10 @@ export function deriveCloth(input: {
         info,
         parts: stored.filter(shown),
         ...(live && { live }),
-        ...(meta.mends?.[info.id] && { mends: meta.mends[info.id] }),
-        ...(meta.muted?.[info.id] && { muted: true }),
-        ...(undone && { reverted: true }),
+         ...(meta.mends?.[info.id] && { mends: meta.mends[info.id] }),
+         ...(meta.muted?.[info.id] && { muted: true }),
+         ...(seamOf.get(info.id) && { seam: true }),
+         ...(undone && { reverted: true }),
         ...(answers && { replies: answers }),
       },
     ]
@@ -326,6 +336,7 @@ export function copyMetaForFork(meta: WeftMeta, survivingIds: ReadonlyMap<string
         return next ? [[next, value] as const] : []
       }),
     )
+  const keepFrom = meta.seam && survivingIds.get(meta.seam.keepFrom)
   return compactMeta({
     v: 1,
     system: meta.system,
@@ -334,6 +345,7 @@ export function copyMetaForFork(meta: WeftMeta, survivingIds: ReadonlyMap<string
     muted: carry(meta.muted),
     thought: carry(meta.thought),
     mends: carry(meta.mends),
+    ...(meta.seam && keepFrom && { seam: { ...meta.seam, keepFrom } }),
   })
 }
 
@@ -396,6 +408,10 @@ export function createLiberation(deps: {
   content: (sessionID: string) => SessionContent | undefined
   directory: (sessionID: string) => string | undefined
   continueSession: (sessionID: string) => Promise<void>
+  /** the chosen model's context window, for sizing the verbatim tail */
+  limit?: (sessionID: string) => number | undefined
+  /** a turn is running: a seam is only taken between turns */
+  busy?: (sessionID: string) => boolean
 }): LiberationActions {
   const { http } = deps
   const scope = (sessionID: string) => ({ directory: deps.directory(sessionID) })
@@ -595,6 +611,32 @@ export function createLiberation(deps: {
       const doomedParts = await removeMessages(sessionID, all, doomed)
       await remember(sessionID, (meta) => forget(meta, doomed, doomedParts))
       await deps.continueSession(sessionID)
+    },
+
+    async seamPreview(sessionID, keepFrom) {
+      const all = await history(sessionID)
+      return buildSeam({ messages: all.messages, parts: all.parts, keepFrom, limit: deps.limit?.(sessionID) })
+    },
+
+    async seamSession(sessionID, keepFrom, card) {
+      if (deps.busy?.(sessionID)) throw new Error("Wait for the turn to end: a seam is taken between turns.")
+      const all = await history(sessionID)
+      const session = await freshSession(sessionID)
+      const seam = buildSeam({ messages: all.messages, parts: all.parts, keepFrom, card, limit: deps.limit?.(sessionID) })
+      if (revertedIDs(all.messages, session.revert).has(seam.keepFrom))
+        throw new Error("This message was undone in OpenCode. Press Unrevert first: the next prompt deletes it.")
+      const problem = seamProblem(seam, all.messages)
+      if (problem) throw new Error(problem)
+      await remember(sessionID, (meta) => {
+        meta.seam = seam
+      })
+      return seam
+    },
+
+    async unseamSession(sessionID) {
+      await remember(sessionID, (meta) => {
+        delete meta.seam
+      })
     },
   }
 }

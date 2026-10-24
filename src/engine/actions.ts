@@ -117,12 +117,21 @@ export function createActions(deps: {
   const afterCredentials = () =>
     reloadForCredentials(() => Promise.allSettled([api.instance.dispose(state.directory), api.instance.dispose()]))
 
+  const contextLimit = (sessionID: string) => {
+    const choice = store.choiceFor(sessionID)
+    if (!choice) return undefined
+    const provider = state.providers.all.find((p) => p.id === choice.providerID)
+    return provider?.models[choice.modelID]?.limit.context
+  }
+
   const liberation = createLiberation({
     http,
     info: (sessionID) => state.info[sessionID],
     content: (sessionID) => state.content[sessionID],
     directory: directoryOf,
     continueSession,
+    limit: contextLimit,
+    busy: (sessionID) => !!state.status[sessionID] && state.status[sessionID].type !== "idle",
   })
 
   return {

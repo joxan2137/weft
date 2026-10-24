@@ -144,17 +144,31 @@ async fn handle(mut stream: TcpStream, inner: Arc<Inner>) {
     {
         return;
     }
-    match tokio::io::copy_bidirectional(&mut stream, &mut upstream).await {
-        Ok(_) => {
-            if let Some(url) = &attempt.entry {
+    let mut closing = inner.closing.subscribe();
+    let closed = async {
+        let Some(url) = &attempt.entry else {
+            return std::future::pending().await;
+        };
+        loop {
+            match closing.recv().await {
+                Ok(Closing::Exit(gone)) if &gone == url => return,
+                Ok(Closing::Token(gone)) if token.as_deref() == Some(gone.as_str()) => return,
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                    return std::future::pending().await;
+                }
+                _ => {}
+            }
+        }
+    };
+    tokio::select! {
+        copied = tokio::io::copy_bidirectional(&mut stream, &mut upstream) => {
+            if copied.is_ok()
+                && let Some(url) = &attempt.entry
+            {
                 inner.report_good(url);
             }
         }
-        Err(_) => {
-            if let Some(url) = &attempt.entry {
-                inner.report_unstable(url);
-            }
-        }
+        () = closed => {}
     }
 }
 
@@ -319,6 +333,7 @@ mod tests {
             client: reqwest::Client::new(),
             fallback: None,
             control: "test".into(),
+            closing: tokio::sync::broadcast::channel(64).0,
             listener: tokio::sync::Mutex::new(None),
         });
         let proxy_task = tokio::spawn(async move {

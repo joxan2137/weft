@@ -2,6 +2,7 @@ import type { Model, Provider } from "@opencode-ai/sdk/v2/types"
 import { createEffect, createMemo, createSignal, For, on, Show } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { useWeft } from "../../engine/context"
+import { withOpenGateway } from "../../engine/opengateway"
 import { IconCheck, IconCross, IconFile, IconImage, IconPlus, IconTool, IconWaves } from "../icons"
 import {
   best,
@@ -57,6 +58,7 @@ function ModelPickerBody(props: PickerProps) {
   const dialog = useDialog()
   const [query, setQuery] = createSignal("")
   const current = createMemo(() => currentModel(state, props.sessionID))
+  const providers = createMemo(() => withOpenGateway(state.providers.all))
   const isCurrent = (row: ModelRow) => current()?.providerID === row.provider.id && current()?.modelID === row.model.id
 
   const groups = createMemo<Group[]>(() => {
@@ -72,7 +74,7 @@ function ModelPickerBody(props: PickerProps) {
         out.push({ key: "recent", label: "Recent", connected: true, rows: recent.map((x) => ({ index: index++, ...x, connected: true })) })
     }
     let others = 0
-    for (const provider of sortProviders(state.providers.all, state.providers.connected)) {
+    for (const provider of sortProviders(providers(), state.providers.connected)) {
       const isConnected = connected.has(provider.id)
       if (!isConnected && (!q || others >= MAX_OTHER_PROVIDERS)) continue
       let found = usableModels(provider).map((model) => {
@@ -132,7 +134,7 @@ function ModelPickerBody(props: PickerProps) {
     dialog.close()
   }
 
-  const total = createMemo(() => state.providers.all.reduce((n, p) => n + usableModels(p).length, 0))
+  const total = createMemo(() => providers().reduce((n, p) => n + usableModels(p).length, 0))
 
   return (
     <>
@@ -212,7 +214,7 @@ function ModelPickerBody(props: PickerProps) {
             </span>
             <span class="row-title">Connect a provider</span>
             <span class="row-sub">
-              {state.providers.connected.length} connected · {state.providers.all.length} available
+              {state.providers.connected.length} connected · {providers().length} available
             </span>
           </button>
         </div>

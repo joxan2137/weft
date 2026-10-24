@@ -4,7 +4,7 @@ mod socks;
 
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
-use std::net::Ipv4Addr;
+use std::net::{Ipv4Addr, Ipv6Addr};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -54,6 +54,7 @@ const SOURCES: [(&str, Scheme); 8] = [
 const HEALTH_URL: &str = "https://opencode.ai/";
 const ZEN_CHAT_URL: &str = "https://opencode.ai/zen/v1/chat/completions";
 const ZEN_PROBE_MODEL: &str = "big-pickle";
+const ZEN_FREE_TIER_ERROR: &str = "FreeTierError";
 const GEO_LOOKUP_URL: &str = "http://ip-api.com/json";
 const CANDIDATE_LIMIT: usize = 1_000;
 const WORKING_TARGET: usize = 30;
@@ -104,13 +105,15 @@ impl ParsedProxy {
             (Some(username), None) => format!("{}@", encode(username)),
             _ => String::new(),
         };
-        format!(
-            "{}://{}{}:{}",
-            self.scheme.prefix(),
-            auth,
-            self.host,
-            self.port
-        )
+        format!("{}://{}{}", self.scheme.prefix(), auth, self.authority())
+    }
+
+    fn authority(&self) -> String {
+        if self.host.parse::<Ipv6Addr>().is_ok() {
+            format!("[{}]:{}", self.host, self.port)
+        } else {
+            format!("{}:{}", self.host, self.port)
+        }
     }
 
     fn probe_url(&self) -> String {
@@ -126,13 +129,13 @@ impl ParsedProxy {
             Scheme::Socks4 => "socks4a",
             Scheme::Http => "http",
         };
-        format!("{scheme}://{auth}{}:{}", self.host, self.port)
+        format!("{scheme}://{auth}{}", self.authority())
     }
 
     pub fn masked(&self) -> String {
         match &self.username {
-            Some(username) => format!("{}:{}:{}:***", self.host, self.port, username),
-            None => format!("{}:{}", self.host, self.port),
+            Some(username) => format!("{}:{}:***", self.authority(), username),
+            None => self.authority(),
         }
     }
 }
@@ -154,8 +157,11 @@ fn decode(input: &str) -> String {
     let mut out = Vec::with_capacity(bytes.len());
     let mut index = 0;
     while index < bytes.len() {
-        if bytes[index] == b'%' && index + 2 < bytes.len() {
-            let hex = &input[index + 1..index + 3];
+        if bytes[index] == b'%'
+            && let Some(hex) = bytes.get(index + 1..index + 3)
+            && hex.iter().all(u8::is_ascii_hexdigit)
+        {
+            let hex = std::str::from_utf8(hex).unwrap_or_default();
             if let Ok(byte) = u8::from_str_radix(hex, 16) {
                 out.push(byte);
                 index += 3;
@@ -176,7 +182,6 @@ fn split_scheme(input: &str) -> (Option<Scheme>, &str) {
         ("socks5h://", Scheme::Socks5),
         ("socks5://", Scheme::Socks5),
         ("socks://", Scheme::Socks5),
-        ("https://", Scheme::Http),
         ("http://", Scheme::Http),
     ];
     for (prefix, scheme) in schemes {
@@ -191,78 +196,60 @@ fn split_scheme(input: &str) -> (Option<Scheme>, &str) {
 }
 
 pub fn parse_proxy(input: &str) -> Result<ParsedProxy, String> {
-    let (scheme, rest) = split_scheme(input);
-    let stripped = rest.split('/').next().unwrap_or("").trim();
+    if input
+        .trim()
+        .get(..8)
+        .is_some_and(|start| start.eq_ignore_ascii_case("https://"))
+    {
+        return Err(format!(
+            "Weft cannot reach a proxy over TLS, enter it as http:// instead: {}",
+            masked_input(input)
+        ));
+    }
+    let (scheme, stripped) = address_part(input);
     if stripped.is_empty() {
         return Err("a SOCKS proxy needs a host and port".into());
     }
-    let at = stripped.rfind('@');
-    if let Some(at) = at {
-        let suffix = &stripped[at + 1..];
-        let mut parts = suffix.split(':');
-        if let (Some(host), Some(port), None) = (parts.next(), parts.next(), parts.next())
-            && port.chars().all(|c| c.is_ascii_digit())
-            && !port.is_empty()
-        {
-            let auth = &stripped[..at];
-            let (username, password) = match auth.split_once(':') {
-                Some((username, password)) => (decode(username), Some(decode(password))),
-                None => (decode(auth), None),
-            };
-            if username.is_empty() || password.as_deref().is_some_and(str::is_empty) {
-                return Err(format!(
-                    "the proxy credentials are incomplete: {}",
-                    masked_input(input)
-                ));
-            }
-            let parsed = host_port(host, port, input)?;
-            return Ok(ParsedProxy {
-                scheme: scheme.unwrap_or(Scheme::Socks5),
-                username: Some(username),
-                password,
-                ..parsed
-            });
-        }
-    }
-
-    if let Some(rest) = stripped.strip_prefix('[') {
-        let Some((host, rest)) = rest.split_once(']') else {
-            return Err(format!(
-                "the proxy address is malformed: {}",
-                masked_input(input)
-            ));
+    let scheme = scheme.unwrap_or(Scheme::Socks5);
+    if let Some((auth, suffix)) = stripped.rsplit_once('@')
+        && let Some(parsed) = endpoint(suffix, input)
+    {
+        let parsed = parsed?;
+        let (username, password) = match auth.split_once(':') {
+            Some((username, password)) => (decode(username), Some(decode(password))),
+            None => (decode(auth), None),
         };
-        let Some(rest) = rest.strip_prefix(':') else {
+        if username.is_empty() || password.as_deref().is_some_and(str::is_empty) {
             return Err(format!(
-                "the proxy address is malformed: {}",
-                masked_input(input)
-            ));
-        };
-        let mut parts = rest.split(':');
-        let Some(port) = parts.next() else {
-            return Err(format!(
-                "the proxy address is malformed: {}",
-                masked_input(input)
-            ));
-        };
-        let parsed = host_port(host, port, input)?;
-        let credentials: Vec<&str> = parts.collect();
-        if credentials.is_empty() {
-            return Ok(ParsedProxy {
-                scheme: scheme.unwrap_or(Scheme::Socks5),
-                ..parsed
-            });
-        }
-        if credentials.len() < 2 {
-            return Err(format!(
-                "the proxy address is malformed: {}",
+                "the proxy credentials are incomplete: {}",
                 masked_input(input)
             ));
         }
         return Ok(ParsedProxy {
-            scheme: scheme.unwrap_or(Scheme::Socks5),
-            username: Some(decode(credentials[0])),
-            password: Some(decode(credentials[1..].join(":").as_str())),
+            scheme,
+            username: Some(username),
+            password,
+            ..parsed
+        });
+    }
+
+    if let Some(rest) = stripped.strip_prefix('[') {
+        let malformed = || format!("the proxy address is malformed: {}", masked_input(input));
+        let (host, rest) = rest.split_once(']').ok_or_else(malformed)?;
+        let rest = rest.strip_prefix(':').ok_or_else(malformed)?;
+        let (port, credentials) = match rest.split_once(':') {
+            Some((port, credentials)) => (port, Some(credentials)),
+            None => (rest, None),
+        };
+        let parsed = host_port(host, port, input)?;
+        let Some(credentials) = credentials else {
+            return Ok(ParsedProxy { scheme, ..parsed });
+        };
+        let (username, password) = credentials.split_once(':').ok_or_else(malformed)?;
+        return Ok(ParsedProxy {
+            scheme,
+            username: Some(username.to_owned()),
+            password: Some(password.to_owned()),
             ..parsed
         });
     }
@@ -270,15 +257,15 @@ pub fn parse_proxy(input: &str) -> Result<ParsedProxy, String> {
     let parts: Vec<&str> = stripped.split(':').collect();
     if parts.len() == 2 {
         return Ok(ParsedProxy {
-            scheme: scheme.unwrap_or(Scheme::Socks5),
+            scheme,
             ..host_port(parts[0], parts[1], input)?
         });
     }
     if parts.len() >= 4 {
         return Ok(ParsedProxy {
-            scheme: scheme.unwrap_or(Scheme::Socks5),
-            username: Some(decode(parts[2])),
-            password: Some(decode(&parts[3..].join(":"))),
+            scheme,
+            username: Some(parts[2].to_owned()),
+            password: Some(parts[3..].join(":")),
             ..host_port(parts[0], parts[1], input)?
         });
     }
@@ -286,6 +273,26 @@ pub fn parse_proxy(input: &str) -> Result<ParsedProxy, String> {
         "the proxy address needs host:port or host:port:login:password: {}",
         masked_input(input)
     ))
+}
+
+fn address_part(input: &str) -> (Option<Scheme>, &str) {
+    let (scheme, rest) = split_scheme(input);
+    let rest = match scheme {
+        Some(_) => rest.split('/').next().unwrap_or(""),
+        None => rest.trim_end_matches('/'),
+    };
+    (scheme, rest.trim())
+}
+
+fn endpoint(suffix: &str, input: &str) -> Option<Result<ParsedProxy, String>> {
+    let (host, port) = match suffix.strip_prefix('[') {
+        Some(rest) => rest.split_once("]:")?,
+        None => suffix.split_once(':').filter(|(_, port)| !port.contains(':'))?,
+    };
+    if port.is_empty() || !port.chars().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    Some(host_port(host, port, input))
 }
 
 fn host_port(host: &str, port: &str, input: &str) -> Result<ParsedProxy, String> {
@@ -314,8 +321,7 @@ fn host_port(host: &str, port: &str, input: &str) -> Result<ParsedProxy, String>
 }
 
 fn masked_input(input: &str) -> String {
-    let (_, rest) = split_scheme(input);
-    let stripped = rest.split('/').next().unwrap_or("").trim();
+    let (_, stripped) = address_part(input);
     match stripped.rsplit_once('@') {
         Some((_, host)) => format!("***@{host}"),
         None => stripped.to_owned(),
@@ -424,6 +430,7 @@ pub(crate) struct PoolState {
     pub entries: Vec<Entry>,
     pub cursor: usize,
     pub strikes: HashMap<String, u32>,
+    pub evicted: HashSet<String>,
     pub country_cache: HashMap<String, Geo>,
     pub blocked: HashSet<String>,
     pub last_refresh: Option<Instant>,
@@ -435,6 +442,7 @@ impl Default for PoolState {
             entries: Vec::new(),
             cursor: 0,
             strikes: HashMap::new(),
+            evicted: HashSet::new(),
             country_cache: HashMap::new(),
             blocked: BLOCKED_COUNTRIES.into_iter().map(str::to_owned).collect(),
             last_refresh: None,
@@ -515,7 +523,14 @@ pub(crate) struct Inner {
     pub client: reqwest::Client,
     pub fallback: Option<ParsedProxy>,
     pub control: String,
+    pub closing: tokio::sync::broadcast::Sender<Closing>,
     listener: tokio::sync::Mutex<Option<Listener>>,
+}
+
+#[derive(Clone)]
+pub(crate) enum Closing {
+    Exit(String),
+    Token(String),
 }
 
 struct Listener {
@@ -554,6 +569,7 @@ impl Proxy {
                 fallback,
                 control: uuid::Uuid::new_v4().to_string(),
                 listener: tokio::sync::Mutex::new(None),
+            closing: tokio::sync::broadcast::channel(64).0,
             }),
         }
     }
@@ -881,6 +897,7 @@ impl Inner {
     }
 
     pub(crate) fn bind_token(&self, token: &str, url: &str) {
+        let _ = self.closing.send(Closing::Token(token.to_owned()));
         lock(&self.tokens).insert(token, url.to_owned());
     }
 
@@ -907,6 +924,7 @@ impl Inner {
 
     pub(crate) fn report_token(self: &Arc<Self>, token: &str, reason: &str) {
         let url = lock(&self.tokens).remove(token);
+        let _ = self.closing.send(Closing::Token(token.to_owned()));
         if let Some(url) = url {
             self.evict(&url, reason);
         }
@@ -923,8 +941,10 @@ impl Inner {
             if pool.entries.len() == before {
                 return;
             }
+            pool.evicted.insert(url.to_owned());
             pool.entries.len()
         };
+        let _ = self.closing.send(Closing::Exit(url.to_owned()));
         applog::line(
             "proxy",
             format!("evicted {} ({reason}), {remaining} left", mask_url(url)),
@@ -1065,6 +1085,42 @@ mod tests {
     }
 
     #[test]
+    fn ipv6_custom_proxies_survive_being_saved() {
+        let proxy = parse_proxy("socks5://[2001:db8::1]:1080").unwrap();
+        assert_eq!(proxy.url(), "socks5://[2001:db8::1]:1080");
+        assert_eq!(parse_proxy(&proxy.url()).unwrap().host, "2001:db8::1");
+
+        let proxy = parse_proxy("socks5://user:pass@[::1]:1080").unwrap();
+        assert_eq!((proxy.host.as_str(), proxy.port), ("::1", 1080));
+        assert_eq!(proxy.password.as_deref(), Some("pass"));
+        assert_eq!(parse_proxy(&proxy.url()).unwrap().host, "::1");
+        assert_eq!(proxy.masked(), "[::1]:1080:user:***");
+    }
+
+    #[test]
+    fn colon_form_passwords_are_taken_verbatim() {
+        let proxy = parse_proxy("1.2.3.4:1080:user:pa/ss%41").unwrap();
+        assert_eq!(proxy.password.as_deref(), Some("pa/ss%41"));
+        let proxy = parse_proxy("1.2.3.4:1080:user:p@ss").unwrap();
+        assert_eq!(proxy.host, "1.2.3.4");
+        assert_eq!(proxy.password.as_deref(), Some("p@ss"));
+        assert_eq!(parse_proxy(&proxy.url()).unwrap().password.as_deref(), Some("p@ss"));
+        assert_eq!(
+            parse_proxy("socks5://user:p%aé@1.2.3.4:1080").unwrap().password.as_deref(),
+            Some("p%aé")
+        );
+    }
+
+    #[test]
+    fn https_proxies_are_refused() {
+        assert!(parse_proxy("https://1.2.3.4:8443").is_err());
+        assert_eq!(
+            parse_proxy("http://1.2.3.4:8080/").unwrap().scheme,
+            Scheme::Http
+        );
+    }
+
+    #[test]
     fn candidates_are_plain_ipv4_hosts() {
         assert_eq!(
             probe_candidate("1.2.3.4:1080", Scheme::Socks4).as_deref(),
@@ -1133,6 +1189,7 @@ mod selection_tests {
             fallback: None,
             control: "test".into(),
             listener: tokio::sync::Mutex::new(None),
+            closing: tokio::sync::broadcast::channel(64).0,
         })
     }
 
@@ -1160,6 +1217,16 @@ mod selection_tests {
         inner.report_token("one", "quota");
         let next = inner.select(Some("one")).unwrap().entry.unwrap();
         assert_eq!(next, "socks5://2.2.2.2:1080");
+    }
+
+    #[test]
+    fn a_report_closes_the_sessions_tunnels_and_the_evicted_exit() {
+        let inner = inner();
+        let mut closing = inner.closing.subscribe();
+        let first = inner.select(Some("one")).unwrap().entry.unwrap();
+        inner.report_token("one", "HTTP 429");
+        assert!(matches!(closing.try_recv(), Ok(Closing::Token(token)) if token == "one"));
+        assert!(matches!(closing.try_recv(), Ok(Closing::Exit(url)) if url == first));
     }
 
     #[test]
@@ -1205,3 +1272,4 @@ mod selection_tests {
         assert!(matches!(selected.upstream, Upstream::Direct));
     }
 }
+

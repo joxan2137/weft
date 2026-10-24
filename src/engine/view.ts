@@ -29,6 +29,8 @@ export type PickView = {
   source?: string
   /** kept in the cloth but left out of the model's context */
   muted?: boolean
+  /** before the session's seam: on disk, but elided from the model's context by the card */
+  seam?: boolean
   /** undone in OpenCode (`session.revert`): kept for its Redo, deleted for good by the next prompt */
   reverted?: boolean
   /** user picks: the stored replies answering it (assistant messages whose `parentID` is this pick) */

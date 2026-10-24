@@ -776,6 +776,20 @@ kbd {
   box-shadow: inset 0 0 0 1.5px var(--ink-4);
 }
 
+/* before the seam: still yours to read and restore, but the card speaks for it to the model */
+.pick.seam .pick-body {
+  opacity: 0.6;
+  filter: saturate(0.55);
+}
+.pick.seam .pick-head > .drop {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--teal);
+}
+.pick .tag.seam-label {
+  color: var(--teal);
+  background: color-mix(in srgb, var(--teal-wash) 70%, transparent);
+}
+
 /* the earlier text, shown while hovering "edited" */
 .palimpsest {
   position: absolute;

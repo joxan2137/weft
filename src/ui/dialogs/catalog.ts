@@ -3,7 +3,7 @@ import type { WeftState } from "../../engine/contract"
 
 export type ModelRef = { providerID: string; modelID: string; variant?: string }
 
-export const POPULAR = ["opencode", "opencode-go", "anthropic", "github-copilot", "openai", "google", "openrouter", "vercel"]
+export const POPULAR = ["opencode", "opencode-go", "opengateway", "lithosai", "anthropic", "github-copilot", "openai", "google", "openrouter", "vercel"]
 
 export function basename(path: string) {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path

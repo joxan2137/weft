@@ -1,0 +1,472 @@
+:root {
+  --topbar-sans: "Geist Variable", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--topbar-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+.stage {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 40px 0;
+  overflow: hidden;
+}
+
+.card {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  border-radius: 32px;
+  background: #181818;
+  box-shadow:
+    0 18px 50px rgb(0 0 0 / 0.55),
+    inset 0 1px 0 rgb(255 255 255 / 0.04);
+  overflow: hidden;
+  color: #f1f1f1;
+  font-family: var(--topbar-sans);
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+  transition:
+    width 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    height 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid #2b2b2b;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.card.expanding {
+  transition-duration: 420ms, 420ms, 420ms, 160ms, 160ms;
+}
+
+.card.compact {
+  border-radius: 30px;
+}
+
+.card.leaving {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: 36px;
+  margin: 10px 22px 0 9px;
+}
+
+.avatar {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-right: 16px;
+  border: 1px solid #2f2f2f;
+  border-radius: 50%;
+  background: #1e1e1e;
+}
+
+.starburst,
+.needle {
+  position: relative;
+  z-index: 1;
+  display: block;
+}
+
+.spinner {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  display: block;
+  width: 38px;
+  height: 38px;
+  animation: topbar-spin 0.9s linear infinite;
+}
+
+.approval-dot {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  z-index: 2;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #5b8ff0;
+  animation: topbar-dot 700ms ease-out both;
+}
+
+.done-badge {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-right: 16px;
+}
+
+.action {
+  flex: none;
+  display: flex;
+  margin-right: 11px;
+  color: #d8d8d8;
+}
+
+.title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #f1f1f1;
+  font-size: 24px;
+  font-weight: 450;
+  line-height: 36px;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.title-meta {
+  margin-left: 0.24em;
+  color: #8f8f8f;
+}
+
+.timer {
+  flex: none;
+  margin-left: 12px;
+  color: #9a9a9a;
+  font-size: 21px;
+  line-height: 36px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.card.compact .head {
+  margin: 12px 20px 0 12px;
+}
+
+.card.compact .avatar {
+  margin-right: 12px;
+}
+
+.card.compact .action svg {
+  width: 20px;
+  height: 20px;
+}
+
+.card.compact .title {
+  font-size: 22px;
+}
+
+.body {
+  flex: none;
+  margin-top: 20px;
+  padding: 0 20px 0 19px;
+  animation: topbar-content 180ms 60ms both;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  font-size: 17px;
+  line-height: 22px;
+}
+
+.model {
+  overflow: hidden;
+  color: #9a9a9a;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.step {
+  flex: none;
+  margin-left: auto;
+  padding-left: 16px;
+  color: #a0a0a0;
+  white-space: nowrap;
+}
+
+.progress {
+  display: flex;
+  gap: 6px;
+  height: 5px;
+  margin-top: 12px;
+}
+
+.seg {
+  flex: 1 1 0;
+  height: 5px;
+  border-radius: 3px;
+  background: #2b2b2b;
+}
+
+.seg.on {
+  background: #5b8ff0;
+}
+
+.progress.indeterminate {
+  position: relative;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #2b2b2b;
+}
+
+.progress.indeterminate span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 30%;
+  border-radius: 3px;
+  background: #5b8ff0;
+  animation: topbar-shimmer 1.3s ease-in-out infinite;
+}
+
+.rows {
+  margin: 17px 0 0 -1.2px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  height: 41.4px;
+}
+
+.row-icon {
+  flex: none;
+  display: flex;
+  width: 18px;
+  height: 18px;
+  color: #8f8f8f;
+}
+
+.row-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: 25.8px;
+  overflow: hidden;
+  color: #c2c2c2;
+  font-size: 21.5px;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.row-time {
+  flex: none;
+  color: #949494;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.row.active .row-icon {
+  color: #f0f0f0;
+}
+
+.row.active .row-label {
+  color: #ececec;
+}
+
+.card.approval .row.active .row-icon {
+  color: #6d9bf5;
+}
+
+.card.approval .row.active .row-label {
+  color: #f4f4f4;
+}
+
+.foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  height: 52px;
+  margin: 18px 20px 0;
+  animation: topbar-content 180ms 60ms both;
+}
+
+.card.approval .foot {
+  gap: 11px;
+}
+
+.pill {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 18px 0 22px;
+  border: 1px solid #2e2e2e;
+  border-radius: 26px;
+  background: transparent;
+  color: #ededed;
+  font-family: inherit;
+  font-size: 20.5px;
+  font-weight: 450;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.pill svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+}
+
+.pill.approve {
+  gap: 11px;
+  padding: 0 20px;
+  border-color: #5c8ff0;
+  background: #5c8ff0;
+  color: #10141c;
+}
+
+.pill.approve svg {
+  width: 16px;
+  height: 16px;
+}
+
+.open {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 52px;
+  margin-left: auto;
+  padding: 0 10px 0 12px;
+  border: 0;
+  background: none;
+  color: #ededed;
+  font-family: inherit;
+  font-size: 20.5px;
+  font-weight: 450;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.open svg {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+}
+
+button::-moz-focus-inner {
+  border: 0;
+}
+
+@keyframes topbar-spin {
+  from {
+    transform: rotate(120deg);
+  }
+  to {
+    transform: rotate(480deg);
+  }
+}
+
+@keyframes topbar-dot {
+  0% {
+    opacity: 0;
+  }
+  45% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes topbar-content {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes topbar-shimmer {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(380%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .card.expanding,
+  .card.leaving {
+    transition-property: opacity;
+    transition-duration: 160ms;
+    transform: none;
+  }
+
+  .body,
+  .foot {
+    animation: none;
+    opacity: 1;
+  }
+
+  .spinner,
+  .approval-dot,
+  .progress.indeterminate span {
+    animation: none;
+  }
+}

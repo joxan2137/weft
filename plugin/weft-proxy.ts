@@ -6,10 +6,12 @@ const SESSION_HEADER = "x-weft-session"
 const SESSION = /^[A-Za-z0-9_-]{1,120}$/
 const ZEN_PROVIDERS = new Set(["opencode", "opencode-go"])
 
-const QUOTA = /rate.?limit|exceeded|quota|free.?tier|too many|already/i
+const QUOTA = /rate.?limit|quota|too many requests|requests? per (minute|hour|day)/i
 const GEO = /not available in (your )?country|unsupported (country|region)|geo.?blocked|blocked.*country|unavailable.*(country|region)/i
-const RETRYABLE = (status: number) => status === 408 || status === 425 || status === 429 || status >= 500
-const TRANSPORT_ATTEMPTS = 3
+const TRANSIENT = (status: number) => status === 408 || status === 425 || status >= 500
+const SHARED_TOKEN = "weft-shared"
+const REQUEST_KEYS = new Set(["body", "cache", "credentials", "headers", "integrity", "keepalive", "method", "mode", "redirect", "referrer", "referrerPolicy", "signal", "window", "duplex", "priority", "proxy"])
+const TRANSPORT_ATTEMPTS = 5
 const QUOTA_ATTEMPTS = 25
 
 async function buffered(response: Response) {
@@ -31,8 +33,7 @@ function isZen(input: unknown) {
   try {
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.toString() : (input as Request).url)
     const host = url.hostname.toLowerCase()
-    if (host !== "opencode.ai" && !host.endsWith(".opencode.ai")) return false
-    return url.pathname === "/zen" || url.pathname.startsWith("/zen/")
+    return host === "opencode.ai" || host.endsWith(".opencode.ai")
   } catch {
     return false
   }
@@ -44,7 +45,8 @@ async function sessionOf(template: Request) {
   const headers = new Headers(template.headers)
   headers.delete(SESSION_HEADER)
   const body = template.body ? await template.arrayBuffer() : undefined
-  return { token: SESSION.test(raw) ? raw : undefined, template: new Request(template, { headers, body }) }
+  const { url, method, signal, redirect } = template
+  return { token: SESSION.test(raw) ? raw : undefined, template: new Request(url, { method, headers, body, signal, redirect }) }
 }
 
 if (BASE && CONTROL) {
@@ -65,7 +67,7 @@ if (BASE && CONTROL) {
 
     let template: Request
     try {
-      template = input instanceof Request ? input.clone() : new Request(input, init)
+      template = new Request(input instanceof Request ? input.clone() : input, init)
     } catch {
       return original(input, init)
     }
@@ -76,20 +78,21 @@ if (BASE && CONTROL) {
       return original(input, init)
     }
     template = session.template
+    const bunOptions = Object.fromEntries(Object.entries(init ?? {}).filter(([key]) => !REQUEST_KEYS.has(key)))
+    const token = session.token ?? SHARED_TOKEN
 
     let last: Response | undefined
     let lastError: unknown
     let transport = 0
     let quota = 0
     while (transport < TRANSPORT_ATTEMPTS && quota < QUOTA_ATTEMPTS) {
-      const token = session.token ?? `weft-${crypto.randomUUID()}`
       const proxy: ProxyOption = {
         url: BASE,
         headers: { "Proxy-Authorization": `Basic ${btoa(`${token}:x`)}` },
       }
       let response: Response
       try {
-        response = await original(template.clone(), { proxy } as RequestInit)
+        response = await original(template.clone(), { ...bunOptions, proxy } as RequestInit)
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") throw error
         lastError = error
@@ -99,11 +102,16 @@ if (BASE && CONTROL) {
       }
 
       if (response.status < 400) return response
-      if (RETRYABLE(response.status)) {
+      if (response.status === 429) {
         last = await buffered(response)
         quota += 1
-        await report(token, `HTTP ${response.status}`)
-        if (response.status === 502) await new Promise((resolve) => setTimeout(resolve, 500))
+        await report(token, "HTTP 429")
+        continue
+      }
+      if (TRANSIENT(response.status)) {
+        last = await buffered(response)
+        transport += 1
+        await new Promise((resolve) => setTimeout(resolve, 500 * transport))
         continue
       }
 

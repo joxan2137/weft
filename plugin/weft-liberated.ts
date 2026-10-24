@@ -25,6 +25,8 @@ export type WeftMeta = {
   order?: Record<string, number>
   muted?: Record<string, true>
   thought?: Record<string, true>
+  /** `seam.keepFrom` is the first message kept verbatim; `seam.text` is pinned at the end of the system prompt. */
+  seam?: { keepFrom: string; text: string }
 }
 
 const VERSION = "weft-liberated/1"
@@ -298,10 +300,18 @@ export default {
     const reweave = (list: WithParts[], meta: WeftMeta) => {
       const path = { cwd: directory, root: worktree }
       const pinned = compactionHead(list)
+      // A seam starts at `keepFrom`: everything stored before it is left out, except the compaction
+      // head opencode itself put in front (a compaction call must keep its own request and summary).
+      const seamAt = meta.seam ? list.findIndex((msg) => msg.info.id === meta.seam?.keepFrom) : -1
+      const elided = (index: number) => seamAt > pinned && index >= pinned && index < seamAt
       const keyOf = (msg: WithParts, index: number) =>
         index < pinned ? Number.NEGATIVE_INFINITY : (meta.order?.[msg.info.id] ?? Number.POSITIVE_INFINITY)
       const keyed = list
-        .map((msg, index) => ({ msg: rewoven(msg, meta, path), key: keyOf(msg, index), index }))
+        .map((msg, index) => ({
+          msg: elided(index) ? undefined : rewoven(msg, meta, path),
+          key: keyOf(msg, index),
+          index,
+        }))
         .filter((item): item is { msg: WithParts; key: number; index: number } => !!item.msg && item.msg.parts.length > 0)
       keyed.sort((a, b) => (a.key === b.key ? a.index - b.index : a.key - b.key))
       // The caller holds its own reference to this array, so it must be mutated in place.
@@ -358,9 +368,14 @@ export default {
         const cached = cachedMeta(input.sessionID)
         const meta = cached ? cached.meta : await fetchMeta(input.sessionID)
         const template = meta?.system?.text
-        const sent = template === undefined ? joined : expand(template, parsed.segments, joined)
-        observe(input.sessionID, { model: `${input.model.providerID}/${input.model.api.id}`, exact: parsed.exact, segments: parsed.segments, rewritten: template !== undefined, sent })
-        if (template === undefined) return
+        const base = template === undefined ? joined : expand(template, parsed.segments, joined)
+        // The seam card goes after everything opencode built, so it is re-sent on every turn and can
+        // never be summarised away with the conversation. `observed.sent` stays the opencode part:
+        // {{opencode}} must not swallow the card and pin it twice.
+        const seam = meta?.seam?.text.trim()
+        const sent = seam ? `${base}\n\n${seam}` : base
+        observe(input.sessionID, { model: `${input.model.providerID}/${input.model.api.id}`, exact: parsed.exact, segments: parsed.segments, rewritten: template !== undefined, sent: base })
+        if (template === undefined && !seam) return
         output.system.splice(0, output.system.length, sent)
       }),
     }

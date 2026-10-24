@@ -547,6 +547,7 @@ export function Pick(props: {
         folded: folded() && !editing(),
         warp: isWarp(),
         muted: !!props.pick.muted || !!props.pick.reverted,
+        seam: !!props.pick.seam,
       }}
       onDblClick={onDouble}
     >
@@ -559,7 +560,12 @@ export function Pick(props: {
         </Show>
         <Show when={props.pick.muted}>
           <span class="tag muted-label" title="Settled: kept in the conversation, never sent to the model">
-            settled · not sent
+            settled  not sent
+          </span>
+        </Show>
+        <Show when={props.pick.seam && !props.pick.muted}>
+          <span class="tag seam-label" title="Before the seam: still on disk and in the cloth, replaced by the hand-off card in the model's context">
+            before the seam
           </span>
         </Show>
         <Show when={props.pick.reverted}>
